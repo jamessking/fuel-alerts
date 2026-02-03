@@ -1,0 +1,35 @@
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { hashToken } from "@/lib/tokens";
+
+type SP = Promise<{ token?: string }>;
+
+export default async function ConfirmPage({ searchParams }: { searchParams: SP }) {
+  const { token } = await searchParams;
+
+  if (!token) {
+    return <div style={{ padding: 24 }}>Invalid confirmation link.</div>;
+  }
+
+  const tokenHash = hashToken(token);
+
+  const { data } = await supabaseAdmin
+    .from("subscribers")
+    .select("email")
+    .eq("confirm_token_hash", tokenHash)
+    .maybeSingle();
+
+  if (!data) {
+    return <div style={{ padding: 24 }}>Invalid or expired confirmation link.</div>;
+  }
+
+  await supabaseAdmin
+    .from("subscribers")
+    .update({
+      status: "active",
+      confirmed_at: new Date().toISOString(),
+      confirm_token_hash: null, // make token single-use
+    })
+    .eq("confirm_token_hash", tokenHash);
+
+  return <div style={{ padding: 24 }}>✅ Confirmed! You’ll start receiving weekly fuel alerts.</div>;
+}
