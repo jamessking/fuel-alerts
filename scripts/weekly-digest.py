@@ -1,13 +1,105 @@
+
+DEBUG_DUMP_ONLY = True
+
+#Imports
+
 import os
 import math
 import requests
 from datetime import datetime, timezone
-
+ 
+ #Constants 
+ 
 FUEL_TOKEN_URL = "https://www.fuel-finder.service.gov.uk/api/v1/oauth/generate_access_token"
-PFS_URL = "https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=1"
-PRICES_URL = "https://www.fuel-finder.service.gov.uk/api/v1/pfs/fuel-prices?batch-number=1"
+PFS_URL = "https://www.fuel-finder.service.gov.uk/api/v1/pfs"
+PRICES_URL = "https://www.fuel-finder.service.gov.uk/api/v1/pfs/fuel-prices"
 
 IMP_GALLON_LITRES = 4.54609
+
+access_token = None  # global for script simplicity
+
+def fetch_pfs_batch(batch: int):
+    r = requests.get(
+        PFS_URL,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+        params={"batch-number": batch},
+        timeout=30,
+    )
+
+    if r.status_code == 400:
+        return None  # signal "no more batches"
+
+    r.raise_for_status()
+    data = r.json()
+
+    if isinstance(data, dict):
+        return data.get("data", [])
+    return data
+
+
+
+def fetch_prices_batch(batch: int):
+    r = requests.get(
+        PRICES_URL,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+        params={"batch-number": batch},
+        timeout=30,
+    )
+
+    if r.status_code == 400:
+        return None
+
+    r.raise_for_status()
+    data = r.json()
+
+    if isinstance(data, dict):
+        return data.get("data", [])
+    return data
+
+
+
+
+def fetch_all_pfs(get_batch_fn):
+    batch = 1
+    all_items = []
+
+    while True:
+        items = get_batch_fn(batch)
+        if items is None:
+            break
+        if not items:
+            break
+        all_items.extend(items)
+        batch += 1
+
+    print(f"Loaded {len(all_items)} PFS records across {batch-1} batches")
+    return all_items
+    
+def fetch_all_prices(get_batch_fn):
+    batch = 1
+    all_items = []
+
+    while True:
+        items = get_batch_fn(batch)
+        if not items:
+            break
+           
+        if not items:
+            break
+        all_items.extend(items)
+        batch += 1
+
+    print(f"Loaded {len(all_items)} price records across {batch-1} batches")
+    return all_items
+    
+
+
 
 def default_mpg_for_fuel(fuel_type: str) -> float:
     ft = (fuel_type or "").upper()
@@ -25,6 +117,38 @@ def litres_per_week(annual_miles: float, mpg: float) -> float:
 
 def pounds_from_pence_per_litre(ppl_pence: float) -> float:
     return ppl_pence / 100.0
+    
+    import csv
+
+def dump_crewe_table(stations, price_index, centre_lat, centre_lon, radius):
+    rows = []
+
+    for st in stations.values():
+        dist = haversine_miles(centre_lat, centre_lon, st["lat"], st["lon"])
+        if dist > radius:
+            continue
+
+        prices = price_index.get(st["node_id"], {})
+
+        rows.append({
+            "node_id": st["node_id"],
+            "name": st.get("trading_name") or st.get("brand_name"),
+            "brand": st.get("brand_name"),
+            "postcode": st.get("postcode"),
+            "distance_miles": round(dist, 2),
+            "E10": prices.get("E10", {}).get("price"),
+            "E5": prices.get("E5", {}).get("price"),
+            "B7_STANDARD": prices.get("B7_STANDARD", {}).get("price"),
+            "B7_PREMIUM": prices.get("B7_PREMIUM", {}).get("price"),
+            "HVO": prices.get("HVO", {}).get("price"),
+        })
+
+    with open("crewe_debug.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"Wrote {len(rows)} rows to crewe_debug.csv")
 
 def supabase_get_last_send(supabase_url: str, service_role_key: str, subscriber_id: str, fuel_type: str):
     url = f"{supabase_url}/rest/v1/weekly_sends"
@@ -153,48 +277,227 @@ def brevo_send_email(api_key: str, sender_email: str, to_email: str, subject: st
     )
     r.raise_for_status()
 
-def build_email_html(site_url: str, subscriber, results, fuel_type: str, delta_html: str = ""):
+def build_email_html(site_url: str, subscriber, results, fuel_type: str, delta_html: str):
+    """
+    results: list of dicts with station + price + distance_miles + lat/lon etc.
+    delta_html: already includes 'Since last week...' AND the 'Estimated impact...' line.
+    """
 
-    # results: list of dicts with station + price + distance
+    def esc(s):
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # --- body list ---
     if not results:
-        body = f"""
-        <p>We couldn't find any <b>{fuel_type}</b> prices within {subscriber['radius_miles']} miles of {subscriber['postcode']}.</p>
+        list_html = f"""
+          <div style="padding:14px 16px;background:#0b2140;border:1px solid rgba(255,255,255,0.10);border-radius:14px;color:rgba(255,255,255,0.88);">
+            We couldn't find any <b>{esc(fuel_type)}</b> prices within {subscriber['radius_miles']} miles of <b>{esc(subscriber['postcode'])}</b>.
+          </div>
         """
     else:
-        rows = []
+        items = []
         for r in results:
-            # price is typically string like "0120.0000" (pence per litre * 1?) depends; we’ll display as-is for now.
-            price = format_price(r["price"])
+            price = format_price(r["price"])  # e.g. "134.9p/L"
             miles = f"{r['distance_miles']:.1f}"
             name = r.get("trading_name") or r.get("brand_name") or "Fuel station"
+            brand = r.get("brand_name") or ""
             addr = r.get("address_line_1") or ""
             updated = r.get("price_last_updated") or ""
             lat = r["lat"]
             lon = r["lon"]
             maps = f"https://www.google.com/maps?q={lat},{lon}"
-            rows.append(
-                f"<li><b>{name}</b> — {price} — {miles} miles<br/>{addr}<br/>Updated: {updated}<br/>"
-                f"<a href='{maps}'>View on map</a></li>"
-            )
-        body = "<p>Cheapest nearby:</p><ol>" + "".join(rows) + "</ol>"
 
-    # unsubscribe link uses token hash? For MVP, we’ll include a simple unsubscribe page token later.
-    # For now, include your website’s unsubscribe page placeholder.
-    unsub = f"{site_url}/"  # replace later when unsubscribe link is in the weekly emails
+            # Nice little “pill” for distance
+            items.append(f"""
+              <tr>
+                <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                    <div>
+                      <div style="font-size:15px;font-weight:800;color:#ffffff;line-height:1.2;">
+                        {esc(name)}
+                      </div>
+                      <div style="font-size:12px;color:rgba(255,255,255,0.70);margin-top:4px;">
+                        {esc(brand)}
+                      </div>
+                      <div style="font-size:12px;color:rgba(255,255,255,0.70);margin-top:6px;line-height:1.35;">
+                        {esc(addr)}
+                      </div>
+                      <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:8px;">
+                        Updated: {esc(updated)}
+                      </div>
+                    </div>
 
+                    <div style="text-align:right;min-width:120px;">
+                      <div style="font-size:16px;font-weight:900;color:#ffffff;">
+                        {esc(price)}
+                      </div>
+                      <div style="display:inline-block;margin-top:6px;padding:6px 10px;border-radius:999px;
+                                  background:rgba(0,255,174,0.14);border:1px solid rgba(0,255,174,0.25);
+                                  color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;">
+                        {miles} mi
+                      </div>
+                      <div style="margin-top:10px;">
+                        <a href="{maps}" style="font-size:12px;color:#7fe7ff;text-decoration:none;font-weight:700;">
+                          View on map →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            """)
+
+        list_html = f"""
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="background:#0b2140;border:1px solid rgba(255,255,255,0.10);border-radius:16px;overflow:hidden;">
+            <tr>
+              <td style="padding:14px 16px;">
+                <div style="font-size:13px;font-weight:900;color:#ffffff;">Cheapest nearby</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.70);margin-top:4px;">
+                  Top {min(5, len(results))} within {subscriber['radius_miles']} miles
+                </div>
+              </td>
+            </tr>
+            {''.join(items)}
+          </table>
+        """
+
+    unsub = f"{site_url}/unsubscribe"  # adjust if you have a tokenised unsubscribe url
+
+    # --- Email wrapper (table-based for compatibility) ---
     return f"""
-    <div style="font-family:system-ui;line-height:1.4">
-    <h2>Fuel Alerts</h2>
-    <p>Area: <b>{subscriber['postcode']}</b> — Radius: <b>{subscriber['radius_miles']} miles</b> — Fuel: <b>{fuel_type}</b></p>
-    {delta_html}
-    {body}
-    <hr/>
-    <p style="font-size:12px;opacity:0.8">You’re receiving this because you subscribed to Fuel Alerts.</p>
-    <p style="font-size:12px;opacity:0.8"><a href="{unsub}">Manage subscription</a></p>
-</div>
-"""
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Fuel Alerts</title>
+  </head>
+  <body style="margin:0;padding:0;background:#07101f;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#07101f;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+
+          <!-- Container -->
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0"
+                 style="max-width:600px;width:100%;border-collapse:separate;border-spacing:0;">
+            <!-- Header -->
+            <tr>
+              <td style="border-radius:18px 18px 0 0;
+                         background:linear-gradient(135deg, rgba(0,200,255,0.22), rgba(0,255,174,0.16));
+                         border:1px solid rgba(255,255,255,0.12);
+                         padding:18px 18px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:40px;height:40px;border-radius:14px;
+                              background:rgba(255,255,255,0.10);
+                              border:1px solid rgba(255,255,255,0.18);
+                              display:flex;align-items:center;justify-content:center;
+                              color:#e6fbff;font-size:18px;font-weight:900;">
+                    ⛽
+                  </div>
+                  <div>
+                    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                                font-size:18px;font-weight:900;color:#eaf2ff;">
+                      Fuel Alerts
+                    </div>
+                    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                                font-size:12px;color:rgba(234,242,255,0.78);margin-top:2px;">
+                      Weekly local fuel prices • simple £ impact
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="background:#0a1630;border-left:1px solid rgba(255,255,255,0.12);
+                         border-right:1px solid rgba(255,255,255,0.12);padding:18px;">
+                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:rgba(255,255,255,0.88);font-size:13px;">
+                  Area: <b style="color:#ffffff;">{esc(subscriber['postcode'])}</b>
+                  &nbsp;•&nbsp; Radius: <b style="color:#ffffff;">{subscriber['radius_miles']} miles</b>
+                  &nbsp;•&nbsp; Fuel: <b style="color:#ffffff;">{esc(fuel_type)}</b>
+                </div>
+
+                <!-- Summary card -->
+                <div style="margin-top:14px;padding:14px 16px;border-radius:16px;
+                            background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);">
+                  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                              font-size:12px;color:rgba(255,255,255,0.72);margin-bottom:6px;">
+                    This week’s movement
+                  </div>
+                  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                              font-size:13px;color:rgba(255,255,255,0.92);line-height:1.45;">
+                    {delta_html}
+                  </div>
+                </div>
+
+                <div style="margin-top:14px;">
+                  {list_html}
+                </div>
+
+                <div style="margin-top:18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                            font-size:12px;color:rgba(255,255,255,0.62);line-height:1.5;">
+                  You’re receiving this because you subscribed to Fuel Alerts.
+                  <br/>
+                  <a href="{unsub}" style="color:#7fe7ff;text-decoration:none;font-weight:700;">Manage subscription →</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="border-radius:0 0 18px 18px;background:#061021;
+                         border:1px solid rgba(255,255,255,0.12);border-top:none;
+                         padding:14px 18px;">
+                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+                            font-size:11px;color:rgba(255,255,255,0.55);line-height:1.4;">
+                  Tip: add your MPG for a more accurate £/week estimate. Defaults are labelled clearly when used.
+                </div>
+              </td>
+            </tr>
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+    """
+def dump_all_stations(stations, price_index):
+    rows = []
+
+    for st in stations.values():
+        prices = price_index.get(st["node_id"], {})
+        rows.append({
+            "node_id": st["node_id"],
+            "name": st.get("trading_name") or st.get("brand_name"),
+            "brand": st.get("brand_name"),
+            "postcode": st.get("postcode"),
+            "E10": prices.get("E10", {}).get("price"),
+            "E5": prices.get("E5", {}).get("price"),
+            "B7_STANDARD": prices.get("B7_STANDARD", {}).get("price"),
+            "B7_PREMIUM": prices.get("B7_PREMIUM", {}).get("price"),
+            "HVO": prices.get("HVO", {}).get("price"),
+        })
+
+    with open("all_stations_debug.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"Wrote {len(rows)} rows to all_stations_debug.csv")
 
 def main():
+    
+    global access_token
+
+    client_id = os.getenv("FUEL_CLIENT_ID")
+    client_secret = os.getenv("FUEL_CLIENT_SECRET")
+
+    access_token = get_access_token(client_id, client_secret)
+
+    stations_raw = fetch_all_pfs(fetch_pfs_batch)
+    prices_raw   = fetch_all_prices(fetch_prices_batch)
     supabase_url = require_env("SUPABASE_URL").rstrip("/")
     supabase_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
     brevo_key = require_env("BREVO_API_KEY")
@@ -203,7 +506,10 @@ def main():
 
     fuel_client_id = require_env("FUEL_CLIENT_ID")
     fuel_client_secret = require_env("FUEL_CLIENT_SECRET")
-
+    
+    
+    
+    
     # Pull active subscribers
     subs = supabase_select_active_subscribers(supabase_url, supabase_key)
     print(f"[{datetime.now(timezone.utc).isoformat()}] Active subscribers: {len(subs)}")
@@ -254,6 +560,8 @@ def main():
                 "price": price,
                 "price_last_updated": updated,
             }
+
+     
 
     # For each subscriber, filter & email
     for sub in subs:
