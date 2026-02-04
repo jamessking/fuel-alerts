@@ -106,6 +106,9 @@ def upsert_stations(stations: List[dict]):
         json=rows,
         timeout=60,
     )
+    if r.status_code == 403:
+    print("403 headers:", r.headers)
+    print("403 body:", r.text)
     r.raise_for_status()
 
 # -----------------------------
