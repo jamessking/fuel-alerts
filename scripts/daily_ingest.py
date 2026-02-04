@@ -25,21 +25,21 @@ HEADERS_SUPABASE = {
 # AUTH
 # -----------------------------
 def get_access_token() -> str:
-r = requests.post(
-    TOKEN_URL,
-    headers={
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "FuelAlerts/1.0 (contact: jamessking76@gmail.com)",
-        "Accept": "application/json",
-    },
-    data={
-        "grant_type": "client_credentials",
-        "client_id": FUEL_CLIENT_ID,
-        "client_secret": FUEL_CLIENT_SECRET,
-        "scope": "fuelfinder.read",
-    },
-    timeout=30,
-)
+    r = requests.post(
+        TOKEN_URL,
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "FuelAlerts/1.0 (contact: jamessking76@gmail.com)",
+            "Accept": "application/json",
+        },
+        data={
+            "grant_type": "client_credentials",
+            "client_id": FUEL_CLIENT_ID,
+            "client_secret": FUEL_CLIENT_SECRET,
+            "scope": "fuelfinder.read",
+        },
+        timeout=30,
+    )
 
 
 # -----------------------------
