@@ -49,9 +49,15 @@ def fetch_all(endpoint: str, token: str) -> List[dict]:
     all_items = []
     batch = 1
 
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "FuelAlerts/1.0 (contact: jamessking76@gmail.com)",
+        "Accept": "application/json",
+    }
+
     while True:
         url = f"{endpoint}?batch-number={batch}"
-        r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=60)
+        r = requests.get(url, headers=headers, timeout=60)
 
         if r.status_code == 400:
             break  # no more batches
@@ -66,6 +72,7 @@ def fetch_all(endpoint: str, token: str) -> List[dict]:
         batch += 1
 
     return all_items
+
 
 # -----------------------------
 # UPSERT STATIONS
