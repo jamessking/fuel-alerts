@@ -1,3 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
+import requests
+
 import os
 import requests
 from datetime import date
@@ -21,6 +27,7 @@ HEADERS_SUPABASE = {
     "Content-Type": "application/json",
     "Prefer": "resolution=merge-duplicates",
 }
+
 
 # -----------------------------
 # AUTH
@@ -49,6 +56,7 @@ def get_access_token() -> str:
         raise RuntimeError(f"Unexpected token response: {j}")
 
     return j["data"]["access_token"]
+
 
 
 # -----------------------------
@@ -116,8 +124,8 @@ def upsert_stations(stations: List[dict]):
         timeout=60,
     )
     if r.status_code == 403:
-    print("403 headers:", r.headers)
-    print("403 body:", r.text)
+        print("403 headers:", r.headers)
+        print("403 body:", r.text)
     r.raise_for_status()
 
 # -----------------------------
