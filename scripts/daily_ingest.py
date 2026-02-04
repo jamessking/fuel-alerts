@@ -24,6 +24,7 @@ HEADERS_SUPABASE = {
 # -----------------------------
 # AUTH
 # -----------------------------
+def get_access_token() -> str:
 r = requests.post(
     TOKEN_URL,
     headers={
