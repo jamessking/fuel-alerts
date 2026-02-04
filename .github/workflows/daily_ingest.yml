@@ -31,4 +31,4 @@ jobs:
           FUEL_CLIENT_ID: ${{ secrets.FUEL_CLIENT_ID }}
           FUEL_CLIENT_SECRET: ${{ secrets.FUEL_CLIENT_SECRET }}
         run: |
-          python scripts/daily-ingest.py
+          python scripts/daily_ingest.py
