@@ -19,6 +19,7 @@ HEADERS_SUPABASE = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json",
+    "Prefer": "resolution=merge-duplicates",
 }
 
 # -----------------------------
@@ -40,6 +41,14 @@ def get_access_token() -> str:
         },
         timeout=30,
     )
+
+    r.raise_for_status()
+    j = r.json()
+
+    if not j.get("success") or "data" not in j or "access_token" not in j["data"]:
+        raise RuntimeError(f"Unexpected token response: {j}")
+
+    return j["data"]["access_token"]
 
 
 # -----------------------------
