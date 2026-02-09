@@ -146,13 +146,19 @@ def insert_prices(prices: List[dict]):
                 "price_last_updated": fp.get("price_last_updated"),
             })
 
+    if not rows:
+        print("No price rows to insert.")
+        return
+
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/fuel_prices_daily",
         headers=HEADERS_SUPABASE,
         json=rows,
-        timeout=60,
+        timeout=120,
     )
     r.raise_for_status()
+
+    print(f"Inserted {len(rows)} price rows.")
 
 # -----------------------------
 # MAIN
