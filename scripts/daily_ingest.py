@@ -36,15 +36,13 @@ def get_access_token() -> str:
     r = requests.post(
         TOKEN_URL,
         headers={
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",  # ✅ Changed to JSON
             "User-Agent": "FuelAlerts/1.0 (contact: jamessking76@gmail.com)",
             "Accept": "application/json",
         },
-        data={
-            "grant_type": "client_credentials",
+        json={  # ✅ Changed from data= to json=
             "client_id": FUEL_CLIENT_ID,
             "client_secret": FUEL_CLIENT_SECRET,
-            "scope": "fuelfinder.read",
         },
         timeout=30,
     )
