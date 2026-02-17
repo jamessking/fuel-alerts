@@ -33,9 +33,3 @@ jobs:
           SITE_URL: ${{ secrets.SITE_URL }}
         run: |
           python scripts/weekly_digest.py
-```
-
-### 3. Make sure `requirements.txt` has all dependencies:
-```
-requests
-python-dotenv
