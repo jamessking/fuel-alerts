@@ -68,7 +68,7 @@ def supabase_get_active_subscribers(url: str, key: str) -> list:
     r = requests.get(
         f"{url}/rest/v1/subscribers",
         params={
-            "select": "id,email,postcode,lat,lon,radius_miles,fuel_type,annual_miles,mpg,tank_litres,unsubscribe_token_hash",
+            "select": "node_id,trading_name,brand_name,postcode,latitude,longitude,temporary_closure,permanent_closure",
             "status": "eq.active",
         },
         headers=sb_headers(key),
@@ -86,8 +86,7 @@ def supabase_get_stations(url: str, key: str) -> list:
             f"{url}/rest/v1/pfs_stations",
             params={
                 "select": "node_id,trading_name,brand_name,postcode,latitude,longitude",
-                "temporary_closure": "is.false",
-                "permanent_closure": "is.false",
+                # Don't filter on closure - handle it in Python instead
             },
             headers={
                 **sb_headers(key),
@@ -766,12 +765,15 @@ def main():
     # Index stations
     stations = {}
     for s in stations_raw:
-        if s.get("latitude") and s.get("longitude"):
-            stations[s["node_id"]] = {
-                **s,
-                "lat": float(s["latitude"]),
-                "lon": float(s["longitude"]),
-            }
+    if s.get("latitude") and s.get("longitude"):
+        # Skip only if EXPLICITLY closed (not NULL)
+        if s.get("temporary_closure") is True or s.get("permanent_closure") is True:
+            continue
+        stations[s["node_id"]] = {
+            **s,
+            "lat": float(s["latitude"]),
+            "lon": float(s["longitude"]),
+        }
 
     # Index prices: node_id -> fuel_type -> record
     price_index = {}
