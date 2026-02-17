@@ -78,32 +78,61 @@ def supabase_get_active_subscribers(url: str, key: str) -> list:
     return r.json()
 
 def supabase_get_stations(url: str, key: str) -> list:
-    r = requests.get(
-        f"{url}/rest/v1/pfs_stations",
-        params={
-            "select": "node_id,trading_name,brand_name,postcode,latitude,longitude",
-            "temporary_closure": "is.false",
-            "permanent_closure": "is.false",
-        },
-        headers=sb_headers(key),
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    all_rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        r = requests.get(
+            f"{url}/rest/v1/pfs_stations",
+            params={
+                "select": "node_id,trading_name,brand_name,postcode,latitude,longitude",
+                "temporary_closure": "is.false",
+                "permanent_closure": "is.false",
+            },
+            headers={
+                **sb_headers(key),
+                "Range": f"{offset}-{offset+limit-1}",
+                "Range-Unit": "items",
+            },
+            timeout=30,
+        )
+        data = r.json()
+        if not data:
+            break
+        all_rows.extend(data)
+        if len(data) < limit:
+            break
+        offset += limit
+    return all_rows
+
 
 def supabase_get_latest_prices(url: str, key: str) -> list:
     today = date.today().isoformat()
-    r = requests.get(
-        f"{url}/rest/v1/fuel_prices_daily",
-        params={
-            "select": "node_id,fuel_type,price,price_last_updated",
-            "snapshot_date": f"eq.{today}",
-        },
-        headers=sb_headers(key),
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    all_rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        r = requests.get(
+            f"{url}/rest/v1/fuel_prices_daily",
+            params={
+                "select": "node_id,fuel_type,price,price_last_updated",
+                "snapshot_date": f"eq.{today}",
+            },
+            headers={
+                **sb_headers(key),
+                "Range": f"{offset}-{offset+limit-1}",
+                "Range-Unit": "items",
+            },
+            timeout=30,
+        )
+        data = r.json()
+        if not data:
+            break
+        all_rows.extend(data)
+        if len(data) < limit:
+            break
+        offset += limit
+    return all_rows
 
 def supabase_get_7day_prices(url: str, key: str, node_id: str, fuel_type: str) -> list:
     """Get last 7 days of prices for a specific station"""
