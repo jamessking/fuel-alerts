@@ -1,0 +1,41 @@
+name: Weekly Fuel Digest Email
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"  # Every Monday at 7am UTC
+  workflow_dispatch:       # Manual trigger too
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    environment: fuel_alerts
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run weekly digest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          python scripts/weekly_digest.py
+```
+
+### 3. Make sure `requirements.txt` has all dependencies:
+```
+requests
+python-dotenv
