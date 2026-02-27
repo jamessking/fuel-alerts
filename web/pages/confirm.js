@@ -106,9 +106,9 @@ export default function Confirm() {
                           {i === 0 ? '🏆' : `#${i + 1}`}
                         </div>
                         <div className={styles.stationInfo}>
-                          <div className={styles.stationName}>{s.name || s.brand || 'Station'}</div>
+                          <div className={styles.stationName}>{s.trading_name || s.brand_name || 'Station'}</div>
                           <div className={styles.stationMeta}>
-                            {s.address && <span>{s.address}</span>}
+                            {s.postcode && <span>{s.postcode}</span>}
                             {s.distance_miles != null && (
                               <span className={styles.stationDist}>{s.distance_miles.toFixed(1)} miles away</span>
                             )}
