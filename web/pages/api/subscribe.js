@@ -3,7 +3,7 @@ import crypto from 'crypto'
 
 const BASE_URL = 'https://fuel-alerts.vercel.app'
 
-async function sendConfirmationEmail(email, confirmToken) {
+async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
   const confirmUrl = `${BASE_URL}/confirm?token=${confirmToken}`
 
   const htmlContent = `
@@ -51,6 +51,10 @@ async function sendConfirmationEmail(email, confirmToken) {
         </div>
       </td>
     </tr>
+	<p style="text-align:center; margin-top:16px;">
+		<a href="${BASE_URL}/unsubscribe?token=${unsubscribeToken}" 
+		style="font-size:11px; color:#4a5a7a;">Unsubscribe</a>
+	</p>
     <tr>
       <td style="padding-top:28px; text-align:center;">
         <p style="font-size:12px; color:#4a5a7a; line-height:1.6;">
@@ -122,7 +126,7 @@ export default async function handler(req, res) {
       .eq('id', existing.id)
 
     try {
-      await sendConfirmationEmail(email.toLowerCase().trim(), confirmToken)
+      await sendConfirmationEmail(email.toLowerCase().trim(), confirmToken, unsubscribeToken)
     } catch (err) {
       console.error('Brevo resend error:', err)
     }
@@ -152,7 +156,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await sendConfirmationEmail(email.toLowerCase().trim(), confirmToken)
+    await sendConfirmationEmail(email.toLowerCase().trim(), confirmToken, unsubscribeToken)
   } catch (err) {
     console.error('Brevo send error:', err)
   }
