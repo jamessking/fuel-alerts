@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   const { data: subscriber, error } = await supabase
     .from('subscribers')
-    .select('id, status')
+    .select('id, status, lat, lon, fuel_type, radius_miles, postcode')
     .eq('confirm_token_hash', tokenHash)
     .single()
 
@@ -27,22 +27,52 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Invalid or expired confirmation link.' })
   }
 
-  if (subscriber.status === 'active') {
-    return res.status(200).json({ message: 'Already confirmed.' })
+  if (subscriber.status !== 'active') {
+    const { error: updateError } = await supabase
+      .from('subscribers')
+      .update({
+        status: 'active',
+        confirmed_at: new Date().toISOString(),
+        confirm_token_hash: null,
+      })
+      .eq('id', subscriber.id)
+
+    if (updateError) {
+      return res.status(500).json({ error: 'Failed to confirm subscription.' })
+    }
   }
 
-  const { error: updateError } = await supabase
-    .from('subscribers')
-    .update({
-      status: 'active',
-      confirmed_at: new Date().toISOString(),
-      confirm_token_hash: null,
+  // Fetch live fuel prices using the top5 function
+  // Try each relevant fuel type
+  const fuelTypes = subscriber.fuel_type === 'both'
+    ? ['E10', 'B7_STANDARD']
+    : subscriber.fuel_type === 'petrol'
+    ? ['E10']
+    : ['B7_STANDARD']
+
+  let stations = []
+
+  for (const ft of fuelTypes) {
+    const { data, error: fnError } = await supabase.rpc('top5_cheapest_nearby', {
+      lat: subscriber.lat,
+      lon: subscriber.lon,
+      radius_miles: subscriber.radius_miles,
+      fuel: ft,
     })
-    .eq('id', subscriber.id)
-
-  if (updateError) {
-    return res.status(500).json({ error: 'Failed to confirm subscription.' })
+    if (!fnError && data) {
+      stations = stations.concat(data.map(s => ({ ...s, fuel_type: ft })))
+    }
   }
 
-  return res.status(200).json({ message: 'Confirmed successfully.' })
+  // Sort by price, take top 5
+  stations.sort((a, b) => a.price - b.price)
+  stations = stations.slice(0, 5)
+
+  return res.status(200).json({
+    message: 'Confirmed successfully.',
+    postcode: subscriber.postcode,
+    fuel_type: subscriber.fuel_type,
+    radius_miles: subscriber.radius_miles,
+    stations,
+  })
 }
