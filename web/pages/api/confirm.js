@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: 'Already confirmed.' })
   }
 
-  const { error: updateError } = await supabase
+  /* const { error: updateError } = await supabase
     .from('subscribers')
     .update({
       status: 'confirmed',
@@ -42,7 +42,21 @@ export default async function handler(req, res) {
 
   if (updateError) {
     return res.status(500).json({ error: 'Failed to confirm subscription.' })
-  }
+  } */
+  
+  const { error: updateError } = await supabase
+  .from('subscribers')
+  .update({
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+    confirm_token_hash: null,
+  })
+  .eq('id', subscriber.id)
+
+if (updateError) {
+  console.error('Update error:', JSON.stringify(updateError))
+  return res.status(500).json({ error: updateError.message || 'Failed to confirm subscription.' })
+}
 
   return res.status(200).json({ message: 'Confirmed successfully.' })
 }
