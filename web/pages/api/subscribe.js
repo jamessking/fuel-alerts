@@ -99,10 +99,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
-  // Generate tokens
   const confirmToken = crypto.randomBytes(32).toString('hex')
   const unsubscribeToken = crypto.randomBytes(32).toString('hex')
-
   const confirmTokenHash = crypto.createHash('sha256').update(confirmToken).digest('hex')
   const unsubscribeTokenHash = crypto.createHash('sha256').update(unsubscribeToken).digest('hex')
 
@@ -114,11 +112,10 @@ export default async function handler(req, res) {
     .single()
 
   if (existing) {
-    if (existing.status === 'confirmed') {
+    if (existing.status === 'active') {
       return res.status(409).json({ error: 'This email is already subscribed.' })
     }
-    // Re-send confirmation for pending subscribers
-    // (update their token and send again)
+    // Resend confirmation for pending subscribers
     await supabase
       .from('subscribers')
       .update({ confirm_token_hash: confirmTokenHash, unsubscribe_token_hash: unsubscribeTokenHash })
@@ -151,7 +148,6 @@ export default async function handler(req, res) {
     })
 
   if (error) {
-    console.error('Supabase insert error:', error)
     return res.status(500).json({ error: 'Failed to save subscription. Please try again.' })
   }
 
