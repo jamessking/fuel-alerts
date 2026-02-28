@@ -1,0 +1,444 @@
+.page {
+  min-height: 100vh;
+  background: var(--navy);
+}
+
+/* Nav */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(13,20,37,0.9);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navLeft { display: flex; align-items: center; gap: 0.75rem; }
+.navRight { display: flex; align-items: center; gap: 1rem; }
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.logo span { color: var(--green); }
+
+.navDivider { color: var(--text-muted); font-size: 1.2rem; }
+
+.navTitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.navDate {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+}
+
+.signOutBtn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--navy-border);
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.signOutBtn:hover { color: var(--coral); border-color: rgba(255,107,74,0.3); }
+
+/* Content */
+.content {
+  padding: 1.5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* KPI Row */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpiCard {
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kpiLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.kpiValue {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.kpiSub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kpiTrend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.trendUp { color: #ff6b4a; }
+.trendDown { color: #00e676; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: 0;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+
+.tab:hover { color: var(--text-secondary); }
+
+.tabActive {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--green) !important;
+}
+
+/* Section cards */
+.section {
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 16px;
+  padding: 1.75rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.sectionIcon { font-size: 1.25rem; }
+
+.sectionHeader h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.sectionDesc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}
+
+.sectionLoading {
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--navy-border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Charts */
+.chartWrap {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* Tooltip */
+.tooltip {
+  background: rgba(13,20,37,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+}
+
+.tooltipLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+}
+
+/* Tables */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--navy-border);
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.dataTable th {
+  background: var(--navy-light);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--navy-border);
+}
+
+.dataTable td {
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.dataTable tr:last-child td { border-bottom: none; }
+.dataTable tr:hover td { background: rgba(255,255,255,0.02); }
+
+.mutedCell { color: var(--text-muted) !important; }
+
+.bestRow td { background: rgba(0,230,118,0.04); }
+.worstRow td { background: rgba(255,107,74,0.04); }
+
+.brandCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tableLogo {
+  width: 36px;
+  height: 22px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* Tags */
+.cheapestTag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: rgba(0,230,118,0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+}
+
+.priceyTag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coral);
+  background: rgba(255,107,74,0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+}
+
+/* Supermarkets */
+.superGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.superCard {
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  text-align: center;
+}
+
+.superCardBest {
+  border-color: rgba(0,230,118,0.3);
+  background: rgba(0,230,118,0.05);
+}
+
+.superLogo {
+  width: 70px;
+  height: 40px;
+  object-fit: contain;
+  margin-bottom: 0.25rem;
+}
+
+.superBrand {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.superStations {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.superPrices {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.superPrice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.superPriceLabel {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.superPriceValue {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.superPriceMin {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Motorway */
+.premiumRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.premiumCard {
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.premiumLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.premiumValue {
+  font-family: 'Syne', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.premiumSub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.premiumTankCost {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--navy-mid);
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.subHeading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1.5rem 0 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .kpiRow { grid-template-columns: repeat(3, 1fr); }
+  .superGrid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .content { padding: 1rem; }
+  .kpiRow { grid-template-columns: repeat(2, 1fr); }
+  .superGrid { grid-template-columns: repeat(2, 1fr); }
+  .premiumRow { grid-template-columns: 1fr; }
+  .tabs { overflow-x: auto; }
+}
