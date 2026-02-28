@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import styles from '../styles/Confirm.module.css'
+import StationCard from '../components/StationCard'
 
 const FUEL_LABELS = {
   E10: 'Petrol (E10)',
@@ -106,9 +107,9 @@ export default function Confirm() {
                           {i === 0 ? '🏆' : `#${i + 1}`}
                         </div>
                         <div className={styles.stationInfo}>
-                          <div className={styles.stationName}>{s.trading_name || s.brand_name || 'Station'}</div>
+                          <div className={styles.stationName}>{s.name || s.brand || 'Station'}</div>
                           <div className={styles.stationMeta}>
-                            {s.postcode && <span>{s.postcode}</span>}
+                            {s.address && <span>{s.address}</span>}
                             {s.distance_miles != null && (
                               <span className={styles.stationDist}>{s.distance_miles.toFixed(1)} miles away</span>
                             )}

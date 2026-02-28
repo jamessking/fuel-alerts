@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import styles from '../styles/Unsubscribe.module.css'
+import StationCard from '../components/StationCard'
 
 const FUEL_LABELS = {
   E10: 'Petrol (E10)',
@@ -155,6 +156,9 @@ export default function Unsubscribe() {
                       <div className={`${styles.priceColValue} ${styles.priceColGreen}`}>
                         {formatPrice(data.cheapestNow.price)}
                       </div>
+                      {data.cheapestNow.logo_url && (
+                        <img src={data.cheapestNow.logo_url} alt={data.cheapestNow.brand_name} style={{height:'20px', objectFit:'contain', marginTop:'4px', opacity:0.85}} />
+                      )}
                       <div className={styles.priceColSub}>{data.cheapestNow.trading_name}</div>
                     </div>
                   </div>

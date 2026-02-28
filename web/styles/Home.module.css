@@ -4,15 +4,42 @@
   z-index: 1;
 }
 
+/* Hero photo background */
+.heroBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 800px;
+  background-size: cover;
+  background-position: center 40%;
+  z-index: 0;
+}
+
+.heroBgOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 800px;
+  background: linear-gradient(
+    to bottom,
+    rgba(13, 20, 37, 0.55) 0%,
+    rgba(13, 20, 37, 0.7) 50%,
+    rgba(13, 20, 37, 1) 100%
+  );
+  z-index: 0;
+}
+
 /* Background orbs */
 .orb1 {
   position: fixed;
   top: -200px;
   right: -100px;
-  width: 600px;
-  height: 600px;
+  width: 700px;
+  height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 230, 118, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.06) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -21,10 +48,10 @@
   position: fixed;
   bottom: -200px;
   left: -100px;
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 107, 74, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 107, 74, 0.05) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -37,8 +64,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 2rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(13, 20, 37, 0.6);
 }
 
 .logo {
@@ -157,20 +186,22 @@
 
 /* Form Card */
 .formCard {
-  background: var(--navy-mid);
-  border: 1px solid var(--navy-border);
-  border-radius: 20px;
+  background: rgba(14, 22, 42, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
   padding: 2rem;
   position: relative;
-  box-shadow: 0 0 0 1px rgba(0,230,118,0.05), 0 40px 80px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,230,118,0.08);
 }
 
 .formCard::before {
   content: '';
   position: absolute;
   inset: -1px;
-  border-radius: 21px;
-  background: linear-gradient(135deg, rgba(0,230,118,0.15) 0%, transparent 50%);
+  border-radius: 25px;
+  background: linear-gradient(135deg, rgba(0,230,118,0.12) 0%, transparent 60%);
   pointer-events: none;
   z-index: -1;
 }
@@ -556,6 +587,29 @@ details[open] .optionalToggle::after {
   line-height: 1.2;
 }
 
+.stepsPhoto {
+  width: 100%;
+  height: 220px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.stepsPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 60%;
+  filter: brightness(0.75) saturate(1.1);
+}
+
+.stepsPhotoOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0,230,118,0.15) 0%, transparent 100%);
+}
+
 .steps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -567,7 +621,7 @@ details[open] .optionalToggle::after {
   background: var(--navy-mid);
   border: 1px solid var(--navy-border);
   border-radius: 16px;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .step:hover {

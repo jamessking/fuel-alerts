@@ -1,0 +1,152 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+
+.card:last-child {
+  border-bottom: none;
+}
+
+.card:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.cardBest {
+  background: rgba(0, 230, 118, 0.05);
+  border-left: 3px solid var(--green);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  width: 52px;
+}
+
+.rank {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  min-width: 24px;
+}
+
+.logo {
+  width: 44px;
+  height: 28px;
+  object-fit: contain;
+  object-position: center;
+  filter: brightness(0.95);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.meta span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dist {
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+}
+
+.fuelBadge {
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.68rem !important;
+  color: var(--text-muted) !important;
+}
+
+.amenities {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.amenity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 4px;
+  cursor: default;
+}
+
+.amenityIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  filter: invert(1) opacity(0.6);
+}
+
+/* Price column */
+.priceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.price {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.priceBest {
+  color: var(--green);
+}
+
+.cheapestBadge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: rgba(0, 230, 118, 0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+}
+
+.priceDiff {
+  font-size: 0.72rem;
+  color: var(--coral);
+  font-weight: 500;
+}

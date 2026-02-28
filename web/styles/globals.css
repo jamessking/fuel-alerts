@@ -1,18 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
 
 :root {
-  --navy: #0a0f1e;
-  --navy-mid: #111827;
-  --navy-light: #1a2640;
-  --navy-border: #1e2d4a;
+  --navy: #0d1425;
+  --navy-mid: #162035;
+  --navy-light: #1e2d48;
+  --navy-border: #243558;
   --green: #00e676;
   --green-dim: #00c853;
   --green-glow: rgba(0, 230, 118, 0.15);
   --coral: #ff6b4a;
-  --text-primary: #f0f4ff;
-  --text-secondary: #8899bb;
-  --text-muted: #4a5a7a;
+  --amber: #ffb300;
+  --text-primary: #ffffff;
+  --text-secondary: #94a8cc;
+  --text-muted: #526282;
   --white: #ffffff;
+  --card-bg: rgba(16, 28, 52, 0.85);
+  --card-border: rgba(255,255,255,0.08);
 }
 
 *, *::before, *::after {

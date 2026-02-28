@@ -111,6 +111,19 @@ export default async function handler(req, res) {
       signupPrice = avg
     }
 
+    // Enrich cheapestNow with logo and amenities
+    if (cheapestNow) {
+      const { data: stationDetails } = await supabase
+        .from('pfs_stations')
+        .select('node_id, logo_url, amenities')
+        .eq('node_id', cheapestNow.node_id)
+        .single()
+      if (stationDetails) {
+        cheapestNow.logo_url = stationDetails.logo_url
+        cheapestNow.amenities = stationDetails.amenities
+      }
+    }
+
     const news = await getFuelNews()
 
     return res.status(200).json({

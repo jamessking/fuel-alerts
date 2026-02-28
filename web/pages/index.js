@@ -142,6 +142,9 @@ export default function Home() {
       </Head>
 
       <div className={styles.page}>
+        {/* Hero photo background */}
+        <div className={styles.heroBg} style={{backgroundImage: 'url(https://images.unsplash.com/photo-1709536240401-58dff8e8d597?q=80&w=1548&auto=format&fit=crop)'}} />
+        <div className={styles.heroBgOverlay} />
         {/* Background orbs */}
         <div className={styles.orb1} />
         <div className={styles.orb2} />
@@ -351,6 +354,10 @@ export default function Home() {
           <div className={styles.sectionInner}>
             <div className={styles.sectionLabel}>How it works</div>
             <h2 className={styles.sectionTitle}>Prices sent to you.<br />Not the other way around.</h2>
+            <div className={styles.stepsPhoto}>
+              <img src='https://images.unsplash.com/photo-1596568960638-96244807ed52?q=80&w=1548&auto=format&fit=crop' alt='Fuel station' />
+              <div className={styles.stepsPhotoOverlay} />
+            </div>
             <div className={styles.steps}>
               {[
                 { n: '01', title: 'Enter your postcode', desc: 'Tell us where you are and how far you\'re willing to travel for fuel.' },

@@ -68,6 +68,24 @@ export default async function handler(req, res) {
   stations.sort((a, b) => a.price - b.price)
   stations = stations.slice(0, 5)
 
+  // Enrich with logo and amenities from pfs_stations
+  if (stations.length > 0) {
+    const nodeIds = stations.map(s => s.node_id)
+    const { data: stationDetails } = await supabase
+      .from('pfs_stations')
+      .select('node_id, logo_url, amenities')
+      .in('node_id', nodeIds)
+
+    if (stationDetails) {
+      const detailMap = Object.fromEntries(stationDetails.map(s => [s.node_id, s]))
+      stations = stations.map(s => ({
+        ...s,
+        logo_url: detailMap[s.node_id]?.logo_url || null,
+        amenities: detailMap[s.node_id]?.amenities || [],
+      }))
+    }
+  }
+
   return res.status(200).json({
     message: 'Confirmed successfully.',
     postcode: subscriber.postcode,
