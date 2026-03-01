@@ -28,12 +28,15 @@ export default async function handler(req, res) {
 
     const data = await response.json()
 
-    // Map DVLA fuel type to our fuel_type values
+    // Map DVLA fuel type to API fuel codes
     const fuelMap = {
-      'PETROL': 'petrol',
-      'DIESEL': 'diesel',
-      'ELECTRIC': null,
-      'HYBRID ELECTRIC': 'petrol',
+      'PETROL':            'E10',
+      'DIESEL':            'B7',
+      'ELECTRIC':          null,
+      'HYBRID ELECTRIC':   'E10',
+      'PETROL/ELECTRIC':   'E10',
+      'DIESEL/ELECTRIC':   'B7',
+      'GAS/PETROL':        'E10',
     }
 
     const fuelType = fuelMap[data.fuelType?.toUpperCase()] || null

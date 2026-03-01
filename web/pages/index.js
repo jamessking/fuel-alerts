@@ -232,14 +232,19 @@ export default function Home() {
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Fuel type</label>
                   <div className={styles.fuelButtons}>
-                    {['petrol', 'diesel', 'both'].map(f => (
+                    {[
+                      { value: 'E10', label: '⛽ Unleaded' },
+                      { value: 'E5',  label: '⛽ Super Unleaded' },
+                      { value: 'B7',  label: '🛢 Diesel' },
+                      { value: 'SDV', label: '🛢 Super Diesel' },
+                    ].map(f => (
                       <button
-                        key={f}
+                        key={f.value}
                         type="button"
-                        className={`${styles.fuelBtn} ${fuelType === f ? styles.fuelBtnActive : ''}`}
-                        onClick={() => setFuelType(f)}
+                        className={`${styles.fuelBtn} ${fuelType === f.value ? styles.fuelBtnActive : ''}`}
+                        onClick={() => setFuelType(f.value)}
                       >
-                        {f === 'petrol' ? '⛽ Petrol' : f === 'diesel' ? '🛢 Diesel' : '⚡ Both'}
+                        {f.label}
                       </button>
                     ))}
                   </div>
