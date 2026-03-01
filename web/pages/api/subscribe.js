@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-const BASE_URL = 'https://fuel-alerts.vercel.app'
+const BASE_URL = 'https://fuelalert.co.uk'
 
 async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
   const confirmUrl = `${BASE_URL}/confirm?token=${confirmToken}`
@@ -58,7 +58,7 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
     <tr>
       <td style="padding-top:28px; text-align:center;">
         <p style="font-size:12px; color:#4a5a7a; line-height:1.6;">
-          You signed up at fuel-alerts.vercel.app. If that wasn't you, ignore this email.
+          You signed up at fuel-alerts.co.uk If that wasn't you, ignore this email.
         </p>
       </td>
     </tr>
@@ -73,7 +73,7 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'FuelAlerts', email: 'jamessking76@gmail.com' },
+      sender: { name: 'FuelAlerts', email: 'update@fuelalert.co.uk' },
       to: [{ email }],
       subject: '⛽ Confirm your FuelAlerts subscription',
       htmlContent,
