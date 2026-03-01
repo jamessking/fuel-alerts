@@ -68,7 +68,7 @@ def supabase_get_active_subscribers(url: str, key: str) -> list:
     r = requests.get(
         f"{url}/rest/v1/subscribers",
         params={
-            "select": "node_id,trading_name,brand_name,postcode,latitude,longitude,temporary_closure,permanent_closure",
+            "select": "id,email,postcode,lat,lon,fuel_type,radius_miles,status,unsubscribe_token_hash,annual_miles,mpg,tank_litres",
             "status": "eq.active",
         },
         headers=sb_headers(key),
