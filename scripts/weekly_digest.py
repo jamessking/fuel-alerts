@@ -53,6 +53,27 @@ def esc(s) -> str:
 def format_ppl(v: float) -> str:
     return f"{v:.1f}p/L"
 
+def station_display_name(st: dict) -> str:
+    """Brand name preferred, fall back to trading name"""
+    brand = (st.get("brand_name") or "").strip()
+    trading = (st.get("trading_name") or "").strip()
+    if brand and brand.upper() not in ("", "OTHER", "INDEPENDENT"):
+        return brand
+    return trading or "Independent"
+
+def logo_pill(logo_url: str, alt: str, width: int = 64, height: int = 36) -> str:
+    """Wrap logo in white pill for dark backgrounds"""
+    if not logo_url:
+        return ""
+    safe_alt = (alt or "").replace('"', '&quot;')
+    return (
+        f'<div style="display:inline-block;background:#ffffff;border-radius:8px;'
+        f'padding:5px 10px;margin-bottom:8px;">'
+        f'<img src="{logo_url}" width="{width}" height="{height}" '
+        f'style="display:block;object-fit:contain;vertical-align:middle;" alt="{safe_alt}" />'
+        f'</div>'
+    )
+
 # -----------------------------
 # SUPABASE QUERIES
 # -----------------------------
@@ -402,7 +423,7 @@ def build_email_html(
 
     # Nearest station block (separate from cheapest top 5)
     if nearest_station:
-        n_name  = esc(nearest_station.get("trading_name") or nearest_station.get("brand_name") or "Nearest Station")
+        n_name  = esc(station_display_name(nearest_station))
         n_price = float(nearest_station["price"])
         n_dist  = nearest_station["distance_miles"]
         n_pc    = esc(nearest_station.get("postcode") or "")
@@ -414,12 +435,12 @@ def build_email_html(
         # How much more expensive vs cheapest?
         n_diff  = n_price - cheapest_price
         if n_diff <= 0:
-            n_diff_html = f'<span style="font-size:12px;color:{C_GREEN};font-weight:700;">&#9733; Is the cheapest!</span>'
+            n_diff_html = f'<span style="font-size:12px;color:{C_GREEN};font-weight:700;">&#9733; This is the cheapest station!</span>'
         else:
             n_tank_cost = n_diff * tank_litres / 100
-            n_diff_html = f'<span style="font-size:12px;color:{C_CORAL};">+{n_diff:.1f}p/L &nbsp;&#183;&nbsp; +&#163;{n_tank_cost:.2f} per fill vs cheapest</span>'
+            n_diff_html = f'<span style="font-size:12px;color:{C_CORAL};">+{n_diff:.1f}p/L vs cheapest &nbsp;&#183;&nbsp; +&#163;{n_tank_cost:.2f} per {tank_litres:.0f}L fill</span>'
 
-        logo_html = f'<img src="{n_logo}" width="56" height="32" style="display:block;object-fit:contain;" alt="{n_name}" />' if n_logo else f'<div style="font-size:22px;">&#9981;</div>'
+        logo_html = logo_pill(n_logo, n_name)
 
         nearest_html = f"""
         <div style="background:{C_NAVY_LIGHT};border:1px solid {C_BORDER};border-radius:14px;
@@ -458,7 +479,7 @@ def build_email_html(
     # Station rows — top 5 cheapest
     station_rows = ""
     for i, st in enumerate(top_stations):
-        name  = esc(st.get("trading_name") or st.get("brand_name") or "Fuel Station")
+        name  = esc(station_display_name(st))
         price = float(st["price"])
         dist  = st["distance_miles"]
         pc    = esc(st.get("postcode") or "")
@@ -466,7 +487,7 @@ def build_email_html(
         lon   = st.get("lon") or st.get("longitude", 0)
         maps_url = f"https://www.google.com/maps?q={lat},{lon}"
         logo_url = st.get("logo_url", "")
-        logo_html = f'<img src="{logo_url}" width="48" height="28" style="display:block;object-fit:contain;margin-bottom:6px;" alt="{name}" />' if logo_url else ""
+        logo_html = logo_pill(logo_url, name)
 
         if i == 0:
             # Cheapest — highlighted green border
@@ -636,13 +657,14 @@ def build_email_html(
                 <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
                             text-transform:uppercase;margin-bottom:10px;">
                   Cheapest {esc(fuel_type)} within {radius} miles
+                  {f"&nbsp;&#183;&nbsp; {tank_litres:.0f}L fill costs &#163;{cheapest_price * tank_litres / 100:.2f}" if tank_litres else ""}
                 </div>
                 <div style="font-family:Arial,sans-serif;font-size:60px;font-weight:900;
                             color:{C_GREEN};letter-spacing:-2px;line-height:1;">
                   {cheapest_price:.1f}<span style="font-size:24px;font-weight:600;color:{C_MUTED};">p/L</span>
                 </div>
                 <div style="font-size:14px;font-weight:700;color:{C_TEXT};margin-top:8px;">
-                  {esc(top_stations[0].get('trading_name') or top_stations[0].get('brand_name') or '') if top_stations else ''}
+                  {esc(station_display_name(top_stations[0])) if top_stations else ""}
                 </div>
                 <div style="font-size:12px;color:{C_MUTED};margin-top:3px;">
                   {esc(top_stations[0].get('postcode') or '') if top_stations else ''} &nbsp;&#183;&nbsp;
@@ -690,17 +712,33 @@ def build_email_html(
           <!-- ── SHARE ── -->
           <tr>
             <td style="background:{C_NAVY_LIGHT};border:1px solid {C_BORDER};
-                       border-top:none;padding:20px 32px;">
-              <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
-                          text-transform:uppercase;margin-bottom:12px;">
-                Share with friends
+                       border-top:none;padding:24px 32px;">
+              <div style="font-size:13px;font-weight:700;color:{C_TEXT};margin-bottom:6px;">
+                Know someone who drives near {postcode}?
               </div>
-              <a href="{whatsapp_url}"
-                 style="display:inline-block;background:#25D366;border-radius:10px;
-                        padding:10px 20px;text-decoration:none;font-size:13px;
-                        font-weight:700;color:#ffffff;">
-                &#128241; Share on WhatsApp
-              </a>
+              <div style="font-size:12px;color:{C_MUTED};margin-bottom:16px;">
+                Share the cheapest price &mdash; they could save too.
+              </div>
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding-right:10px;">
+                    <a href="{whatsapp_url}"
+                       style="display:inline-block;background:#25D366;border-radius:10px;
+                              padding:10px 20px;text-decoration:none;font-size:13px;
+                              font-weight:700;color:#ffffff;">
+                      &#128241; WhatsApp
+                    </a>
+                  </td>
+                  <td>
+                    <a href="{site_url}"
+                       style="display:inline-block;background:{C_NAVY_MID};border:1px solid {C_BORDER};
+                              border-radius:10px;padding:10px 20px;text-decoration:none;
+                              font-size:13px;font-weight:700;color:{C_GREEN};">
+                      &#128269; See more at FuelAlerts
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -712,12 +750,17 @@ def build_email_html(
                 Prices from the UK Government Fuel Finder API &#183; Updated within 30 mins of any change
               </div>
               <div style="text-align:center;margin-top:12px;">
+                <a href="{site_url}/#update-preferences"
+                   style="font-size:12px;color:{C_MUTED};text-decoration:none;font-weight:700;">
+                  Update my postcode / fuel type
+                </a>
+                &nbsp;&nbsp;&#183;&nbsp;&nbsp;
                 <a href="{unsub}" style="font-size:12px;color:{C_FAINT};text-decoration:none;">
                   Unsubscribe
                 </a>
                 &nbsp;&nbsp;&#183;&nbsp;&nbsp;
                 <a href="{site_url}/privacy" style="font-size:12px;color:{C_FAINT};text-decoration:none;">
-                  Privacy Policy
+                  Privacy
                 </a>
               </div>
             </td>
