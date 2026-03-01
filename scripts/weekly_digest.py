@@ -389,6 +389,19 @@ C_MUTED      = "#8899bb"
 C_FAINT      = "#4a5a7a"
 
 
+def get_prev_price(history_cache: dict, node_id: str, fuel_type: str, current_price: float):
+    """Return (prev_price, changed_date) from history, or (None, None) if unavailable"""
+    if not history_cache:
+        return None, None
+    rows = history_cache.get(node_id, {}).get(fuel_type, [])
+    # rows are asc by date — find last price different from today's
+    for row in reversed(rows[:-1]):  # skip today (last entry)
+        p = float(row["price"])
+        if abs(p - current_price) >= 0.05:  # meaningful change
+            return p, row["snapshot_date"]
+    return None, None
+
+
 def build_chart_html(price_history: list, fuel_type: str) -> str:
     """Build a pure HTML/CSS bar chart from price history data"""
 
@@ -479,6 +492,7 @@ def build_email_html(
     tank_litres: float,
     used_default_mpg: bool,
     nearest_station: Optional[dict] = None,
+    history_cache: Optional[dict] = None,
 ) -> str:
 
     unsub_token = subscriber.get("unsubscribe_token_hash", "")
@@ -535,11 +549,11 @@ def build_email_html(
         if diff < 0:
             strip_bg = f"background:{C_GREEN_DIM};"
             strip_icon = "&#128176;"  # 💰
-            strip_msg = f"Prices down {abs(diff):.1f}p — save approx. <strong>&#163;{pw:.2f}/week</strong> &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
+            strip_msg = f"Prices dropped {abs(diff):.1f}p this week — you could save <strong>£{pw:.2f}/week</strong> &nbsp;&#183;&nbsp; £{pf:.2f} per tank"
         else:
             strip_bg = f"background:{C_CORAL};"
             strip_icon = "&#9888;"  # ⚠
-            strip_msg = f"Prices up {diff:.1f}p — approx. <strong>&#163;{pw:.2f}/week</strong> more &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
+            strip_msg = f"Prices rose {diff:.1f}p this week — that's <strong>£{pw:.2f}/week</strong> more &nbsp;&#183;&nbsp; £{pf:.2f} extra per tank"
 
         savings_strip = f"""
             <tr>
@@ -573,7 +587,7 @@ def build_email_html(
             n_diff_html = f'<span style="font-size:12px;color:{C_GREEN};font-weight:700;">&#9733; This is the cheapest station!</span>'
         else:
             n_tank_cost = n_diff * tank_litres / 100
-            n_diff_html = f'<span style="font-size:12px;color:{C_CORAL};">+{n_diff:.1f}p/L vs cheapest &nbsp;&#183;&nbsp; +&#163;{n_tank_cost:.2f} per {tank_litres:.0f}L fill</span>'
+            n_diff_html = f'<span style="font-size:12px;color:{C_CORAL};">+{n_diff:.1f}p/L vs cheapest &nbsp;&#183;&nbsp; costs £{n_tank_cost:.2f} more to fill up</span>'
 
         n_logo = n_logo or brand_logo_url(nearest_station)
         logo_html = logo_pill(n_logo, n_name)
@@ -626,6 +640,36 @@ def build_email_html(
         logo_url = logo_url or brand_logo_url(st)
         logo_html = logo_pill(logo_url, name)
 
+        # Previous price + when it changed
+        prev_price, changed_date = get_prev_price(history_cache, st["node_id"], fuel_type, price)
+        if prev_price is not None:
+            pdiff = price - prev_price
+            if pdiff < 0:
+                prev_html = (f'<span style="color:{C_GREEN};font-size:11px;font-weight:700;">'
+                             f'&#9660; {abs(pdiff):.1f}p</span>')
+            elif pdiff > 0:
+                prev_html = (f'<span style="color:{C_CORAL};font-size:11px;font-weight:700;">'
+                             f'&#9650; {pdiff:.1f}p</span>')
+            else:
+                prev_html = f'<span style="color:{C_FAINT};font-size:11px;">No change</span>'
+            # Format date nicely
+            try:
+                cd = datetime.strptime(changed_date, "%Y-%m-%d")
+                days_ago = (date.today() - cd.date()).days
+                if days_ago == 0:
+                    when = "today"
+                elif days_ago == 1:
+                    when = "yesterday"
+                else:
+                    when = f"{days_ago}d ago"
+            except:
+                when = changed_date or ""
+            price_change_html = (f'<div style="margin-top:4px;">{prev_html}'
+                                 f' <span style="color:{C_FAINT};font-size:11px;">'
+                                 f'from {prev_price:.1f}p &nbsp;&#183;&nbsp; changed {when}</span></div>')
+        else:
+            price_change_html = ""
+
         if i == 0:
             # Cheapest — highlighted green border
             station_rows += f"""
@@ -644,6 +688,7 @@ def build_email_html(
                         </div>
                         <div style="font-size:15px;font-weight:700;color:{C_TEXT};">{name}</div>
                         <div style="font-size:12px;color:{C_MUTED};margin-top:3px;">{pc} &nbsp;&#183;&nbsp; {dist:.1f} miles</div>
+                        {price_change_html}
                         <div style="margin-top:10px;">
                           <a href="{maps_url}" style="font-size:12px;font-weight:700;color:{C_GREEN};text-decoration:none;">
                             &#128205; Get Directions &#8594;
@@ -678,6 +723,7 @@ def build_email_html(
                         </div>
                         <div style="font-size:14px;font-weight:700;color:{C_TEXT};">{name}</div>
                         <div style="font-size:12px;color:{C_MUTED};margin-top:2px;">{pc} &nbsp;&#183;&nbsp; {dist:.1f} miles</div>
+                        {price_change_html}
                         <div style="margin-top:8px;">
                           <a href="{maps_url}" style="font-size:12px;font-weight:700;color:{C_MUTED};text-decoration:none;">
                             &#128205; Directions &#8594;
@@ -732,7 +778,7 @@ def build_email_html(
 
     spacer = '<td style="width:12px;"></td>'
 
-    share_msg  = f"Found {fuel_type} at {cheapest_price:.1f}p/L near {postcode} &#128664; FuelAlerts: {site_url}"
+    share_msg  = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — I found it on FuelAlerts. Check if it's cheap near you too: {site_url}"
     from urllib.parse import quote
     whatsapp_url = f"https://wa.me/?text={quote(share_msg)}"
 
@@ -788,8 +834,8 @@ def build_email_html(
                           padding:24px;margin-top:20px;">
                 <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
                             text-transform:uppercase;margin-bottom:10px;">
-                  Cheapest {esc(fuel_label(fuel_type))} within {radius} miles
-                  {f"&nbsp;&#183;&nbsp; {tank_litres:.0f}L fill costs &#163;{cheapest_price * tank_litres / 100:.2f}" if tank_litres else ""}
+                  Best price within {radius} miles
+                  {f"&nbsp;&#183;&nbsp; fills your {tank_litres:.0f}L tank for £{cheapest_price * tank_litres / 100:.2f}" if tank_litres else ""}
                 </div>
                 <div style="font-family:Arial,sans-serif;font-size:60px;font-weight:900;
                             color:{C_GREEN};letter-spacing:-2px;line-height:1;">
@@ -818,10 +864,10 @@ def build_email_html(
                 <tr>
                   <td style="vertical-align:middle;">
                     <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:4px;">
-                      Know a driver near {postcode}?
+                      Know someone who drives near {postcode}?
                     </div>
                     <div style="font-size:12px;color:{C_MUTED};">
-                      Share the cheapest price &mdash; they could save too
+                      Send them this price — if they fill a 50L tank at the cheapest station vs the area average, they'd save £{f"{(area_avg - cheapest_price) * 50 / 100:.2f}" if area_avg else "money"}
                     </div>
                   </td>
                   <td align="right" style="vertical-align:middle;padding-left:16px;white-space:nowrap;">
@@ -874,7 +920,7 @@ def build_email_html(
                        border-top:none;padding:18px 32px;text-align:center;">
               <a href="{site_url}"
                  style="font-size:13px;font-weight:700;color:{C_GREEN};text-decoration:none;">
-                View live prices at fuelalert.co.uk &#8594;
+                &#128269; See all prices &amp; stations at fuelalert.co.uk &#8594;
               </a>
             </td>
           </tr>
@@ -884,12 +930,12 @@ def build_email_html(
             <td style="background:{C_NAVY};border:1px solid {C_BORDER};border-top:none;
                        border-radius:0 0 20px 20px;padding:20px 32px;">
               <div style="font-size:11px;color:{C_FAINT};line-height:1.7;text-align:center;">
-                Prices from the UK Government Fuel Finder API &#183; Updated within 30 mins of any change
+                Prices sourced from the UK Government Fuel Finder API &nbsp;&#183;&nbsp; We check daily for the latest prices
               </div>
               <div style="text-align:center;margin-top:12px;">
                 <a href="{site_url}/#update-preferences"
                    style="font-size:12px;color:{C_MUTED};text-decoration:none;font-weight:700;">
-                  Update my postcode / fuel type
+                  &#9998; Update my details
                 </a>
                 &nbsp;&nbsp;&#183;&nbsp;&nbsp;
                 <a href="{unsub}" style="font-size:12px;color:{C_FAINT};text-decoration:none;">
@@ -994,7 +1040,9 @@ def main():
             candidates.sort(key=lambda x: (float(x["price"]), x["distance_miles"]))
             subscriber_candidates[sub["id"]] = candidates
             if candidates:
-                cheapest_nodes.add(candidates[0]["node_id"])
+                # Add top 5 nodes for history fetch, not just cheapest
+                for c in candidates[:5]:
+                    cheapest_nodes.add(c["node_id"])
         except Exception as e:
             print(f"  Pre-calc error for {sub.get('email')}: {e}")
 
@@ -1066,6 +1114,7 @@ def main():
                 tank_litres    = tank_litres,
                 used_default_mpg = used_default,
                 nearest_station  = nearest_station,
+                history_cache    = history_cache,
             )
 
             brevo_send_email(brevo_key, sender_email, to_email, subject, html)
