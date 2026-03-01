@@ -156,57 +156,111 @@ def supabase_get_latest_prices(url: str, key: str) -> list:
         offset += limit
     return all_rows
 
-def supabase_get_7day_prices(url: str, key: str, node_id: str, fuel_type: str) -> list:
-    """Get last 7 days of prices for a specific station"""
+def supabase_get_all_weekly_sends(url: str, key: str, subscriber_ids: list) -> dict:
+    """Bulk fetch last 12 weekly sends for ALL subscribers in one query.
+    Returns dict: subscriber_id -> list of sends (newest first)
+    """
+    if not subscriber_ids:
+        return {}
+
+    # Supabase in() filter
+    ids_str = ",".join(f'"{sid}"' for sid in subscriber_ids)
+    all_rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        r = requests.get(
+            f"{url}/rest/v1/weekly_sends",
+            params={
+                "select": "subscriber_id,fuel_type,sent_at,cheapest_price,cheapest_node_id",
+                "subscriber_id": f"in.({ids_str})",
+                "order": "sent_at.desc",
+            },
+            headers={
+                **sb_headers(key),
+                "Range": f"{offset}-{offset+limit-1}",
+                "Range-Unit": "items",
+            },
+            timeout=60,
+        )
+        data = r.json()
+        if not data:
+            break
+        all_rows.extend(data)
+        if len(data) < limit:
+            break
+        offset += limit
+
+    # Group by subscriber_id, keep newest 12
+    result = {}
+    for row in all_rows:
+        sid = row["subscriber_id"]
+        result.setdefault(sid, []).append(row)
+    for sid in result:
+        result[sid] = result[sid][:12]  # already sorted desc by query
+    return result
+
+
+def supabase_get_bulk_7day_prices(url: str, key: str, node_ids: list) -> dict:
+    """Bulk fetch 7-day price history for a set of station node_ids.
+    Returns dict: node_id -> fuel_type -> list of {snapshot_date, price} asc
+    """
+    if not node_ids:
+        return {}
+
     since = (date.today() - timedelta(days=7)).isoformat()
-    r = requests.get(
-        f"{url}/rest/v1/fuel_prices_daily",
-        params={
-            "select": "snapshot_date,price",
-            "node_id": f"eq.{node_id}",
-            "fuel_type": f"eq.{fuel_type}",
-            "snapshot_date": f"gte.{since}",
-            "order": "snapshot_date.asc",
-        },
-        headers=sb_headers(key),
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    ids_str = ",".join(f'"{nid}"' for nid in node_ids)
+    all_rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        r = requests.get(
+            f"{url}/rest/v1/fuel_prices_daily",
+            params={
+                "select": "node_id,fuel_type,snapshot_date,price",
+                "node_id": f"in.({ids_str})",
+                "snapshot_date": f"gte.{since}",
+                "order": "snapshot_date.asc",
+            },
+            headers={
+                **sb_headers(key),
+                "Range": f"{offset}-{offset+limit-1}",
+                "Range-Unit": "items",
+            },
+            timeout=60,
+        )
+        data = r.json()
+        if not data:
+            break
+        all_rows.extend(data)
+        if len(data) < limit:
+            break
+        offset += limit
 
-def supabase_get_last_send(url: str, key: str, subscriber_id: str, fuel_type: str) -> Optional[dict]:
-    r = requests.get(
-        f"{url}/rest/v1/weekly_sends",
-        params={
-            "select": "sent_at,cheapest_price,cheapest_node_id",
-            "subscriber_id": f"eq.{subscriber_id}",
-            "fuel_type": f"eq.{fuel_type}",
-            "order": "sent_at.desc",
-            "limit": "1",
-        },
-        headers=sb_headers(key),
-        timeout=30,
-    )
-    r.raise_for_status()
-    rows = r.json()
-    return rows[0] if rows else None
+    # Index: node_id -> fuel_type -> [rows]
+    result = {}
+    for row in all_rows:
+        nid = row["node_id"]
+        ft  = row["fuel_type"]
+        result.setdefault(nid, {}).setdefault(ft, []).append({
+            "snapshot_date": row["snapshot_date"],
+            "price": row["price"],
+        })
+    return result
 
-def supabase_get_weeks_cheapest(url: str, key: str, subscriber_id: str, node_id: str, fuel_type: str) -> int:
-    """Count consecutive weeks this station was cheapest for this subscriber"""
-    r = requests.get(
-        f"{url}/rest/v1/weekly_sends",
-        params={
-            "select": "cheapest_node_id",
-            "subscriber_id": f"eq.{subscriber_id}",
-            "fuel_type": f"eq.{fuel_type}",
-            "order": "sent_at.desc",
-            "limit": "12",
-        },
-        headers=sb_headers(key),
-        timeout=30,
-    )
-    r.raise_for_status()
-    rows = r.json()
+
+def get_last_send_from_cache(sends_cache: dict, subscriber_id: str, fuel_type: str) -> Optional[dict]:
+    """Look up last send from pre-fetched cache"""
+    rows = sends_cache.get(subscriber_id, [])
+    for row in rows:
+        if row.get("fuel_type") == fuel_type:
+            return row
+    return None
+
+
+def get_weeks_cheapest_from_cache(sends_cache: dict, subscriber_id: str, node_id: str, fuel_type: str) -> int:
+    """Count consecutive weeks cheapest from pre-fetched cache"""
+    rows = [r for r in sends_cache.get(subscriber_id, []) if r.get("fuel_type") == fuel_type]
     count = 0
     for row in rows:
         if row.get("cheapest_node_id") == node_id:
@@ -878,6 +932,42 @@ def main():
         if nid and ft and p.get("price"):
             price_index.setdefault(nid, {})[ft] = p
 
+    # ── Bulk fetch historical data (1 query each, not 1 per subscriber) ──
+    subscriber_ids = [s["id"] for s in subscribers]
+    print("Fetching weekly send history (bulk)...")
+    sends_cache = supabase_get_all_weekly_sends(supabase_url, supabase_key, subscriber_ids)
+    print(f"Send history loaded for {len(sends_cache)} subscribers")
+
+    # First pass: work out which cheapest station each subscriber will get
+    # so we can bulk-fetch their 7-day histories in one query
+    print("Calculating cheapest stations per subscriber...")
+    cheapest_nodes = set()
+    subscriber_candidates = {}
+    for sub in subscribers:
+        try:
+            sub_lat   = float(sub["lat"])
+            sub_lon   = float(sub["lon"])
+            radius    = int(sub["radius_miles"])
+            fuel_type = sub.get("fuel_type") or "E10"
+            candidates = []
+            for nid, st in stations.items():
+                fp = price_index.get(nid, {}).get(fuel_type)
+                if not fp:
+                    continue
+                dist = haversine_miles(sub_lat, sub_lon, st["lat"], st["lon"])
+                if dist <= radius:
+                    candidates.append({**st, **fp, "distance_miles": dist})
+            candidates.sort(key=lambda x: (float(x["price"]), x["distance_miles"]))
+            subscriber_candidates[sub["id"]] = candidates
+            if candidates:
+                cheapest_nodes.add(candidates[0]["node_id"])
+        except Exception as e:
+            print(f"  Pre-calc error for {sub.get('email')}: {e}")
+
+    print(f"Fetching 7-day history for {len(cheapest_nodes)} unique stations (bulk)...")
+    history_cache = supabase_get_bulk_7day_prices(supabase_url, supabase_key, list(cheapest_nodes))
+    print(f"History loaded for {len(history_cache)} stations")
+
     sent_count = error_count = 0
 
     for sub in subscribers:
@@ -888,21 +978,11 @@ def main():
             fuel_type  = sub.get("fuel_type") or "E10"
             to_email   = sub["email"]
 
-            # Find candidates within radius
-            candidates = []
-            for nid, st in stations.items():
-                fp = price_index.get(nid, {}).get(fuel_type)
-                if not fp:
-                    continue
-                dist = haversine_miles(sub_lat, sub_lon, st["lat"], st["lon"])
-                if dist <= radius:
-                    candidates.append({**st, **fp, "distance_miles": dist})
+            candidates = subscriber_candidates.get(sub["id"], [])
 
             # Nearest station (closest, regardless of price)
-            nearest_station = min(candidates, key=lambda x: x['distance_miles']) if candidates else None
+            nearest_station = min(candidates, key=lambda x: x["distance_miles"]) if candidates else None
 
-            candidates.sort(key=lambda x: (float(x['price']), x['distance_miles']))
-            top = candidates[:5]
             top = candidates[:5]
 
             if not top:
@@ -912,19 +992,15 @@ def main():
             cheapest_price = float(top[0]["price"])
             cheapest_node  = top[0]["node_id"]
 
-            # Last send
-            last = supabase_get_last_send(supabase_url, supabase_key, sub["id"], fuel_type)
+            # Last send — from cache (no API call)
+            last = get_last_send_from_cache(sends_cache, sub["id"], fuel_type)
             last_price = float(last["cheapest_price"]) if last and last.get("cheapest_price") else None
 
-            # Weeks cheapest
-            weeks_cheapest = supabase_get_weeks_cheapest(
-                supabase_url, supabase_key, sub["id"], cheapest_node, fuel_type
-            )
+            # Weeks cheapest — from cache (no API call)
+            weeks_cheapest = get_weeks_cheapest_from_cache(sends_cache, sub["id"], cheapest_node, fuel_type)
 
-            # 7-day price history for cheapest station
-            price_history = supabase_get_7day_prices(
-                supabase_url, supabase_key, cheapest_node, fuel_type
-            )
+            # 7-day price history — from cache (no API call)
+            price_history = history_cache.get(cheapest_node, {}).get(fuel_type, [])
 
             # Area average
             area_prices = [float(c["price"]) for c in candidates]
