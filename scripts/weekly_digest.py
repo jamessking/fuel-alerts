@@ -54,12 +54,14 @@ def format_ppl(v: float) -> str:
     return f"{v:.1f}p/L"
 
 def station_display_name(st: dict) -> str:
-    """Brand name preferred, fall back to trading name"""
+    """Use brand_clean first (already normalised), fall back to trading name"""
+    clean = (st.get("brand_clean") or "").strip()
+    if clean:
+        return clean
+    # Fallback to raw brand_name with basic cleanup
     brand = (st.get("brand_name") or "").strip()
     trading = (st.get("trading_name") or "").strip()
-    # Use brand name if it exists and isn't a junk value
     if brand and brand.upper() not in ("", "OTHER", "INDEPENDENT", "NULL", "N/A"):
-        # Title-case it for readability (ESSO -> Esso, BP -> BP)
         return brand if len(brand) <= 3 else brand.title()
     return trading.title() if trading else "Independent"
 
@@ -108,7 +110,7 @@ def supabase_get_stations(url: str, key: str) -> list:
         r = requests.get(
             f"{url}/rest/v1/pfs_stations",
             params={
-                "select": "node_id,trading_name,brand_name,postcode,latitude,longitude",
+                "select": "node_id,trading_name,brand_name,brand_clean,postcode,latitude,longitude",
                 # Don't filter on closure - handle it in Python instead
             },
             headers={
@@ -307,6 +309,27 @@ FUEL_DISPLAY = {
 def fuel_label(ft: str) -> str:
     return FUEL_DISPLAY.get((ft or "").upper(), ft or "Fuel")
 
+# Normalise whatever the subscriber signed up with -> API fuel type code
+FUEL_NORMALISE = {
+    # Petrol variants
+    "PETROL":          "E10",
+    "UNLEADED":        "E10",
+    "E10":             "E10",
+    "E5":              "E5",
+    "SUPER UNLEADED":  "E5",
+    "SUPER":           "E5",
+    # Diesel variants
+    "DIESEL":          "B7",
+    "B7":              "B7",
+    "SUPER DIESEL":    "SDV",
+    "SDV":             "SDV",
+    "PREMIUM DIESEL":  "SDV",
+}
+
+def normalise_fuel(ft: str) -> str:
+    """Convert subscriber fuel_type to API fuel code (E10, B7, E5, SDV)"""
+    return FUEL_NORMALISE.get((ft or "").strip().upper(), "E10")
+
 # Brand logo URLs — hosted on Supabase storage or a CDN
 # Keys are uppercase brand_name values from the DB
 BRAND_LOGOS = {
@@ -337,9 +360,20 @@ BRAND_LOGOS = {
 }
 
 def brand_logo_url(st: dict) -> str:
-    """Return logo URL for a station based on brand_name, empty string if none"""
-    brand = (st.get("brand_name") or "").strip().upper()
-    return BRAND_LOGOS.get(brand, "")
+    """Return logo URL — uses brand_clean first, then brand_name"""
+    # brand_clean is already normalised e.g. "Tesco", "Shell", "Motor Fuel Group"
+    clean = (st.get("brand_clean") or "").strip().upper()
+    raw   = (st.get("brand_name")  or "").strip().upper()
+
+    for brand in (clean, raw):
+        if not brand:
+            continue
+        if brand in BRAND_LOGOS:
+            return BRAND_LOGOS[brand]
+        for key in BRAND_LOGOS:
+            if key in brand or brand in key:
+                return BRAND_LOGOS[key]
+    return ""
 
 # Colour palette — matches the website
 C_NAVY       = "#0a0f1e"
@@ -948,7 +982,7 @@ def main():
             sub_lat   = float(sub["lat"])
             sub_lon   = float(sub["lon"])
             radius    = int(sub["radius_miles"])
-            fuel_type = sub.get("fuel_type") or "E10"
+            fuel_type = normalise_fuel(sub.get("fuel_type") or "E10")
             candidates = []
             for nid, st in stations.items():
                 fp = price_index.get(nid, {}).get(fuel_type)
@@ -975,7 +1009,7 @@ def main():
             sub_lat    = float(sub["lat"])
             sub_lon    = float(sub["lon"])
             radius     = int(sub["radius_miles"])
-            fuel_type  = sub.get("fuel_type") or "E10"
+            fuel_type  = normalise_fuel(sub.get("fuel_type") or "E10")
             to_email   = sub["email"]
 
             candidates = subscriber_candidates.get(sub["id"], [])
