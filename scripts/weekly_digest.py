@@ -57,9 +57,11 @@ def station_display_name(st: dict) -> str:
     """Brand name preferred, fall back to trading name"""
     brand = (st.get("brand_name") or "").strip()
     trading = (st.get("trading_name") or "").strip()
-    if brand and brand.upper() not in ("", "OTHER", "INDEPENDENT"):
-        return brand
-    return trading or "Independent"
+    # Use brand name if it exists and isn't a junk value
+    if brand and brand.upper() not in ("", "OTHER", "INDEPENDENT", "NULL", "N/A"):
+        # Title-case it for readability (ESSO -> Esso, BP -> BP)
+        return brand if len(brand) <= 3 else brand.title()
+    return trading.title() if trading else "Independent"
 
 def logo_pill(logo_url: str, alt: str, width: int = 64, height: int = 36) -> str:
     """Wrap logo in white pill for dark backgrounds"""
@@ -391,8 +393,8 @@ def build_email_html(
         </div>
         """
 
-    # Savings strip
-    if diff is not None and annual_miles > 0 and mpg_val:
+    # Savings strip — only show when there's a meaningful price change
+    if diff is not None and abs(diff) >= 0.1 and annual_miles > 0 and mpg_val:
         l_week  = litres_per_week(annual_miles, mpg_val)
         pw      = abs(l_week * pounds_from_ppl(diff))
         pf      = abs(tank_litres * pounds_from_ppl(diff))
@@ -400,11 +402,11 @@ def build_email_html(
         if diff < 0:
             strip_bg = f"background:{C_GREEN_DIM};"
             strip_icon = "&#128176;"  # 💰
-            strip_msg = f"Prices down — save approx. <strong>&#163;{pw:.2f}/week</strong> &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
+            strip_msg = f"Prices down {abs(diff):.1f}p — save approx. <strong>&#163;{pw:.2f}/week</strong> &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
         else:
             strip_bg = f"background:{C_CORAL};"
             strip_icon = "&#9888;"  # ⚠
-            strip_msg = f"Prices up — approx. <strong>&#163;{pw:.2f}/week</strong> more &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
+            strip_msg = f"Prices up {diff:.1f}p — approx. <strong>&#163;{pw:.2f}/week</strong> more &nbsp;&#183;&nbsp; &#163;{pf:.2f} per fill"
 
         savings_strip = f"""
             <tr>
@@ -447,7 +449,7 @@ def build_email_html(
                     padding:18px 20px;margin-bottom:20px;">
           <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
                       text-transform:uppercase;margin-bottom:12px;">
-            &#128205; Your Nearest Station
+            Your Nearest Station
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
             <tr>
@@ -622,20 +624,15 @@ def build_email_html(
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <table role="presentation" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td style="font-size:26px;line-height:1;padding-right:10px;">&#9981;</td>
-                        <td>
-                          <div style="font-size:20px;font-weight:900;color:{C_TEXT};letter-spacing:-0.03em;">
-                            Fuel<span style="color:{C_GREEN};">Alerts</span>
-                          </div>
-                          <div style="font-size:10px;color:{C_FAINT};margin-top:2px;
-                                      letter-spacing:0.08em;text-transform:uppercase;">
-                            Your weekly fuel report
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
+                    <div>
+                      <div style="font-size:22px;font-weight:900;color:{C_TEXT};letter-spacing:-0.03em;">
+                        Fuel<span style="color:{C_GREEN};">Alerts</span>
+                      </div>
+                      <div style="font-size:10px;color:{C_FAINT};margin-top:3px;
+                                  letter-spacing:0.08em;text-transform:uppercase;">
+                        Your weekly fuel report
+                      </div>
+                    </div>
                   </td>
                   <td align="right" style="vertical-align:middle;">
                     <div style="background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);
@@ -678,6 +675,33 @@ def build_email_html(
           <!-- ── SAVINGS STRIP ── -->
           {savings_strip}
 
+          <!-- ── CTA SHARE (prominent, right after savings strip) ── -->
+          <tr>
+            <td style="background:{C_NAVY_LIGHT};border-left:1px solid {C_BORDER};
+                       border-right:1px solid {C_BORDER};padding:20px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:4px;">
+                      Know a driver near {postcode}?
+                    </div>
+                    <div style="font-size:12px;color:{C_MUTED};">
+                      Share the cheapest price &mdash; they could save too
+                    </div>
+                  </td>
+                  <td align="right" style="vertical-align:middle;padding-left:16px;white-space:nowrap;">
+                    <a href="{whatsapp_url}"
+                       style="display:inline-block;background:#25D366;border-radius:10px;
+                              padding:11px 22px;text-decoration:none;font-size:14px;
+                              font-weight:800;color:#ffffff;">
+                      &#128241; Share on WhatsApp
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
           <!-- ── BODY ── -->
           <tr>
             <td style="background:{C_NAVY_MID};border-left:1px solid {C_BORDER};
@@ -702,43 +726,21 @@ def build_email_html(
               <!-- Top 5 cheapest -->
               <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
                           text-transform:uppercase;margin-bottom:14px;">
-                &#9981; Top {len(top_stations)} cheapest stations nearby
+                Top {len(top_stations)} cheapest stations nearby
               </div>
               {station_rows}
 
             </td>
           </tr>
 
-          <!-- ── SHARE ── -->
+          <!-- ── VIEW MORE ── -->
           <tr>
             <td style="background:{C_NAVY_LIGHT};border:1px solid {C_BORDER};
-                       border-top:none;padding:24px 32px;">
-              <div style="font-size:13px;font-weight:700;color:{C_TEXT};margin-bottom:6px;">
-                Know someone who drives near {postcode}?
-              </div>
-              <div style="font-size:12px;color:{C_MUTED};margin-bottom:16px;">
-                Share the cheapest price &mdash; they could save too.
-              </div>
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="padding-right:10px;">
-                    <a href="{whatsapp_url}"
-                       style="display:inline-block;background:#25D366;border-radius:10px;
-                              padding:10px 20px;text-decoration:none;font-size:13px;
-                              font-weight:700;color:#ffffff;">
-                      &#128241; WhatsApp
-                    </a>
-                  </td>
-                  <td>
-                    <a href="{site_url}"
-                       style="display:inline-block;background:{C_NAVY_MID};border:1px solid {C_BORDER};
-                              border-radius:10px;padding:10px 20px;text-decoration:none;
-                              font-size:13px;font-weight:700;color:{C_GREEN};">
-                      &#128269; See more at FuelAlerts
-                    </a>
-                  </td>
-                </tr>
-              </table>
+                       border-top:none;padding:18px 32px;text-align:center;">
+              <a href="{site_url}"
+                 style="font-size:13px;font-weight:700;color:{C_GREEN};text-decoration:none;">
+                View live prices at fuelalert.co.uk &#8594;
+              </a>
             </td>
           </tr>
 
