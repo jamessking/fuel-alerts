@@ -242,6 +242,51 @@ def brevo_send_email(api_key: str, sender_email: str, to_email: str, subject: st
 # EMAIL BUILDER
 # -----------------------------
 
+# Fuel type display names
+FUEL_DISPLAY = {
+    "E10":  "Unleaded (E10)",
+    "E5":   "Super Unleaded",
+    "B7":   "Diesel",
+    "SDV":  "Super Diesel",
+}
+
+def fuel_label(ft: str) -> str:
+    return FUEL_DISPLAY.get((ft or "").upper(), ft or "Fuel")
+
+# Brand logo URLs — hosted on Supabase storage or a CDN
+# Keys are uppercase brand_name values from the DB
+BRAND_LOGOS = {
+    "BP":             "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/BP.png",
+    "SHELL":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/SHELL.png",
+    "ESSO":           "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/ESSO.png",
+    "TEXACO":         "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/TEXACO.png",
+    "TESCO":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/TESCO.png",
+    "ASDA":           "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/ASDA.png",
+    "SAINSBURYS":     "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/SAINSBURYS.png",
+    "MORRISONS":      "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/MORRISONS.png",
+    "GULF":           "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/GULF.png",
+    "JET":            "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/JET.png",
+    "CIRCLE K":       "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/Circle-K.png",
+    "CIRCLEK":        "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/Circle-K.png",
+    "COSTCO":         "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/Costco-1.png",
+    "HARVEST ENERGY": "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/HARVEST_ENERGY.png",
+    "MURCO":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/MURCO.png",
+    "TOTAL":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/TOTAL.png",
+    "MAXOL":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/Maxol.png",
+    "ESSAR":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/ESSAR.png",
+    "CO-OP":          "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/co-op.png",
+    "COOP":           "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/co-op.png",
+    "VALERO":         "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/valero.png",
+    "APPLEGREEN":     "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/applegreen.png",
+    "EG GROUP":       "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/EG_Group_UK_Logo.png",
+    "EG":             "https://qwmdhhdxsxyfwyvvbzgg.supabase.co/storage/v1/object/public/logos/EG_Group_UK_Logo.png",
+}
+
+def brand_logo_url(st: dict) -> str:
+    """Return logo URL for a station based on brand_name, empty string if none"""
+    brand = (st.get("brand_name") or "").strip().upper()
+    return BRAND_LOGOS.get(brand, "")
+
 # Colour palette — matches the website
 C_NAVY       = "#0a0f1e"
 C_NAVY_MID   = "#111827"
@@ -316,7 +361,7 @@ def build_chart_html(price_history: list, fuel_type: str) -> str:
                 padding:18px 18px 14px;margin-bottom:20px;">
       <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.8px;
                   text-transform:uppercase;margin-bottom:14px;">
-        {len(price_history)}-Day Price History &nbsp;·&nbsp; {esc(fuel_type)}
+        {len(price_history)}-Day Price History &nbsp;·&nbsp; {esc(fuel_label(fuel_type))}
       </div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
         <tr style="vertical-align:bottom;">
@@ -442,6 +487,7 @@ def build_email_html(
             n_tank_cost = n_diff * tank_litres / 100
             n_diff_html = f'<span style="font-size:12px;color:{C_CORAL};">+{n_diff:.1f}p/L vs cheapest &nbsp;&#183;&nbsp; +&#163;{n_tank_cost:.2f} per {tank_litres:.0f}L fill</span>'
 
+        n_logo = n_logo or brand_logo_url(nearest_station)
         logo_html = logo_pill(n_logo, n_name)
 
         nearest_html = f"""
@@ -489,6 +535,7 @@ def build_email_html(
         lon   = st.get("lon") or st.get("longitude", 0)
         maps_url = f"https://www.google.com/maps?q={lat},{lon}"
         logo_url = st.get("logo_url", "")
+        logo_url = logo_url or brand_logo_url(st)
         logo_html = logo_pill(logo_url, name)
 
         if i == 0:
@@ -638,7 +685,7 @@ def build_email_html(
                     <div style="background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);
                                 border-radius:999px;padding:5px 14px;display:inline-block;">
                       <span style="font-size:11px;font-weight:700;color:{C_GREEN};">
-                        {esc(fuel_type)} &nbsp;&#183;&nbsp; {postcode} &nbsp;&#183;&nbsp; {radius} mi
+                        {esc(fuel_label(fuel_type))} &nbsp;&#183;&nbsp; {postcode} &nbsp;&#183;&nbsp; {radius} mi
                       </span>
                     </div>
                     <div style="font-size:11px;color:{C_FAINT};margin-top:6px;text-align:right;">
@@ -653,7 +700,7 @@ def build_email_html(
                           padding:24px;margin-top:20px;">
                 <div style="font-size:10px;font-weight:700;color:{C_FAINT};letter-spacing:0.08em;
                             text-transform:uppercase;margin-bottom:10px;">
-                  Cheapest {esc(fuel_type)} within {radius} miles
+                  Cheapest {esc(fuel_label(fuel_type))} within {radius} miles
                   {f"&nbsp;&#183;&nbsp; {tank_litres:.0f}L fill costs &#163;{cheapest_price * tank_litres / 100:.2f}" if tank_litres else ""}
                 </div>
                 <div style="font-family:Arial,sans-serif;font-size:60px;font-weight:900;
@@ -893,7 +940,7 @@ def main():
                 used_default = True
 
             # Build + send email
-            subject = f"Fuel Alerts: cheapest {fuel_type} within {radius} miles of {sub.get('postcode','')}"
+            subject = f"FuelAlerts: cheapest {fuel_label(fuel_type)} within {radius} miles of {sub.get('postcode','')}"
             html = build_email_html(
                 site_url       = site_url,
                 subscriber     = sub,
