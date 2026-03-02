@@ -75,7 +75,7 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
     body: JSON.stringify({
       sender: { name: 'FuelAlerts', email: 'update@fuelalert.co.uk' },
       to: [{ email }],
-      subject: '⛽ Confirm your FuelAlerts subscription',
+      subject: 'Please confirm your email address — FuelAlerts',
       htmlContent,
     }),
   })
