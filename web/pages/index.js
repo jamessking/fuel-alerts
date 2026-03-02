@@ -137,7 +137,7 @@ export default function Home() {
     <>
       <Head>
         <title>FuelAlerts — Never Overpay for Petrol Again</title>
-        <meta name="description" content="Free weekly alerts showing the cheapest fuel near you. Enter your postcode and we'll do the watching." />
+        <meta name="description" content="Weekly alerts showing the cheapest fuel near you. Enter your postcode and we'll do the watching." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -156,7 +156,7 @@ export default function Home() {
             <span className={styles.logoMark}>⛽</span>
             <span className={styles.logoText}>FuelAlerts</span>
           </div>
-          <div className={styles.navBadge}>Free · No app needed</div>
+          <div className={styles.navBadge}>No app needed</div>
         </nav>
 
         {/* Hero */}
@@ -185,8 +185,8 @@ export default function Home() {
               </div>
               <div className={styles.statDivider} />
               <div className={styles.stat}>
-                <span className={styles.statNum}>Free</span>
-                <span className={styles.statLabel}>Always</span>
+                <span className={styles.statNum}>Weekly</span>
+                <span className={styles.statLabel}>Digest</span>
               </div>
             </div>
           </div>
@@ -371,11 +371,11 @@ export default function Home() {
                   className={styles.submitBtn}
                   disabled={submitting}
                 >
-                  {submitting ? 'Signing up...' : 'Get my free FuelAlerts →'}
+                  {submitting ? 'Signing up...' : 'Get my FuelAlerts →'}
                 </button>
 
                 <p className={styles.formFootnote}>
-                  Free forever. Unsubscribe anytime. No app required.
+                  Unsubscribe anytime. No app required.
                 </p>
               </form>
             )}
@@ -466,7 +466,7 @@ export default function Home() {
             <h2>Ready to stop overpaying?</h2>
             <p>Join the drivers already getting smarter about fuel.</p>
             <a href="#top" className={styles.ctaBtn} onClick={e => { e.preventDefault(); window.scrollTo({top: 0, behavior: 'smooth'}) }}>
-              Get started free →
+              Get started →
             </a>
           </div>
         </section>
