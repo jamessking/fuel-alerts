@@ -5,9 +5,11 @@ import styles from '../styles/Confirm.module.css'
 import StationCard from '../components/StationCard'
 
 const FUEL_LABELS = {
-  E10: 'Petrol (E10)',
-  B7_STANDARD: 'Diesel (B7)',
-  E5: 'Premium Petrol (E5)',
+  E10: 'Unleaded',
+  B7_STANDARD: 'Diesel',
+  B7: 'Diesel',
+  E5: 'Super Unleaded',
+  SDV: 'Super Diesel',
 }
 
 function formatPrice(p) {

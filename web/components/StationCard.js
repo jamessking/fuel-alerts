@@ -12,9 +12,11 @@ const AMENITY_ICONS = {
 }
 
 const FUEL_LABELS = {
-  E10: 'Petrol E10',
-  B7_STANDARD: 'Diesel B7',
-  E5: 'Premium E5',
+  E10: 'Unleaded',
+  B7_STANDARD: 'Diesel',
+  B7: 'Diesel',
+  E5: 'Super Unleaded',
+  SDV: 'Super Diesel',
 }
 
 export default function StationCard({ station, rank, cheapestPrice }) {
