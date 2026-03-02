@@ -58,7 +58,7 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
     <tr>
       <td style="padding-top:28px; text-align:center;">
         <p style="font-size:12px; color:#4a5a7a; line-height:1.6;">
-          You signed up at fuel-alerts.co.uk If that wasn't you, ignore this email.
+          You signed up at fuelalert.co.uk If that wasn't you, ignore this email.
         </p>
       </td>
     </tr>
