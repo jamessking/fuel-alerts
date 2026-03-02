@@ -6,7 +6,11 @@ on:
 jobs:
   send-test-digest:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     environment: fuel_alerts  # Same secrets as production
+=======
+    environment: fuel_alerts  # Uses test secrets
+>>>>>>> c7bc04d9f7388021364b47ca24d490e4ca5c4aa6
 
     steps:
       - name: Checkout current branch
