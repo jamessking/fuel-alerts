@@ -7,6 +7,24 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
+// Normalise fuel type to API codes
+const FUEL_NORMALISE = {
+  'petrol':          'E10',
+  'unleaded':        'E10',
+  'e10':             'E10',
+  'e5':              'E5',
+  'super unleaded':  'E5',
+  'diesel':          'B7',
+  'b7':              'B7',
+  'super diesel':    'SDV',
+  'sdv':             'SDV',
+  'both':            null, // handled separately
+}
+
+function normaliseFuel(ft) {
+  return FUEL_NORMALISE[(ft || '').toLowerCase().trim()] || 'E10'
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -42,13 +60,11 @@ export default async function handler(req, res) {
     }
   }
 
-  // Fetch live fuel prices using the top5 function
-  // Try each relevant fuel type
-  const fuelTypes = subscriber.fuel_type === 'both'
-    ? ['E10', 'B7_STANDARD']
-    : subscriber.fuel_type === 'petrol'
-    ? ['E10']
-    : ['B7_STANDARD']
+  // Normalise fuel type — handle 'both' and legacy values
+  const rawFuel = subscriber.fuel_type || 'E10'
+  const fuelTypes = rawFuel.toLowerCase() === 'both'
+    ? ['E10', 'B7']
+    : [normaliseFuel(rawFuel)]
 
   let stations = []
 
@@ -68,18 +84,24 @@ export default async function handler(req, res) {
   stations.sort((a, b) => a.price - b.price)
   stations = stations.slice(0, 5)
 
-  // Enrich with logo and amenities from pfs_stations
+  // Enrich with brand_clean, logo and amenities from pfs_stations
   if (stations.length > 0) {
     const nodeIds = stations.map(s => s.node_id)
     const { data: stationDetails } = await supabase
       .from('pfs_stations')
-      .select('node_id, logo_url, amenities')
+      .select('node_id, trading_name, brand_name, brand_clean, logo_url, amenities')
       .in('node_id', nodeIds)
 
     if (stationDetails) {
       const detailMap = Object.fromEntries(stationDetails.map(s => [s.node_id, s]))
       stations = stations.map(s => ({
         ...s,
+        // Name priority: brand_clean → brand_name → trading_name
+        display_name: detailMap[s.node_id]?.brand_clean
+          || detailMap[s.node_id]?.brand_name
+          || detailMap[s.node_id]?.trading_name
+          || s.name
+          || 'Station',
         logo_url: detailMap[s.node_id]?.logo_url || null,
         amenities: detailMap[s.node_id]?.amenities || [],
       }))
@@ -89,7 +111,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     message: 'Confirmed successfully.',
     postcode: subscriber.postcode,
-    fuel_type: subscriber.fuel_type,
+    fuel_type: normaliseFuel(rawFuel),
     radius_miles: subscriber.radius_miles,
     stations,
   })
