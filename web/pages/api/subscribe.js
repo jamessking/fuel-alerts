@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, postcode, lat, lon, fuel_type, radius_miles, annual_miles, mpg, tank_litres, vehicle } = req.body
+  const { email, postcode, lat, lon, fuel_type, radius_miles, annual_miles, mpg, tank_litres } = req.body
 
   if (!email || !postcode || !lat || !lon || !fuel_type) {
     return res.status(400).json({ error: 'Missing required fields' })
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
     // Resend confirmation for pending subscribers
     await supabase
       .from('subscribers')
-      .update({ confirm_token_hash: confirmTokenHash, unsubscribe_token_hash: unsubscribeTokenHash })
+      .update({ confirm_token_hash: confirmTokenHash, unsubscribe_token_hash: unsubscribeTokenHash, unsubscribe_token: unsubscribeToken })
       .eq('id', existing.id)
 
     try {
@@ -146,6 +146,7 @@ export default async function handler(req, res) {
       status: 'pending',
       confirm_token_hash: confirmTokenHash,
       unsubscribe_token_hash: unsubscribeTokenHash,
+      unsubscribe_token: unsubscribeToken,
       annual_miles: annual_miles || null,
       mpg: mpg || null,
       tank_litres: tank_litres || null,
@@ -153,38 +154,6 @@ export default async function handler(req, res) {
 
   if (error) {
     return res.status(500).json({ error: 'Failed to save subscription. Please try again.' })
-  }
-
-  // Insert vehicle data if provided
-  if (vehicle && vehicle.reg) {
-    const { data: newSubscriber } = await supabase
-      .from('subscribers')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .single()
-
-    if (newSubscriber) {
-      await supabase.from('subscriber_vehicles').insert({
-        subscriber_id: newSubscriber.id,
-        vehicle_reg: vehicle.reg,
-        make: vehicle.make || null,
-        year: vehicle.year || null,
-        month_of_first_registration: vehicle.monthOfFirstRegistration || null,
-        fuel_type: vehicle.fuelTypeRaw || null,
-        colour: vehicle.colour || null,
-        engine_capacity: vehicle.engineCapacity || null,
-        co2_emissions: vehicle.co2Emissions || null,
-        euro_status: vehicle.euroStatus || null,
-        tax_status: vehicle.taxStatus || null,
-        tax_due_date: vehicle.taxDueDate || null,
-        mot_status: vehicle.motStatus || null,
-        mot_expiry_date: vehicle.motExpiryDate || null,
-        type_approval: vehicle.typeApproval || null,
-        wheelplan: vehicle.wheelplan || null,
-        revenue_weight: vehicle.revenueWeight || null,
-        marked_for_export: vehicle.markedForExport || false,
-      })
-    }
   }
 
   try {

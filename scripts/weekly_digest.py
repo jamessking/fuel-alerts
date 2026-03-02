@@ -93,7 +93,7 @@ def supabase_get_active_subscribers(url: str, key: str) -> list:
     r = requests.get(
         f"{url}/rest/v1/subscribers",
         params={
-            "select": "id,email,postcode,lat,lon,fuel_type,radius_miles,status,unsubscribe_token_hash,annual_miles,mpg,tank_litres",
+            "select": "id,email,postcode,lat,lon,fuel_type,radius_miles,status,unsubscribe_token,annual_miles,mpg,tank_litres",
             "status": "eq.active",
         },
         headers=sb_headers(key),
@@ -495,7 +495,7 @@ def build_email_html(
     history_cache: Optional[dict] = None,
 ) -> str:
 
-    unsub_token = subscriber.get("unsubscribe_token_hash", "")
+    unsub_token = subscriber.get("unsubscribe_token", "")
     unsub  = f"{site_url}/unsubscribe?token={esc(unsub_token)}"
     postcode = esc(subscriber.get("postcode", ""))
     radius   = subscriber.get("radius_miles", 5)
