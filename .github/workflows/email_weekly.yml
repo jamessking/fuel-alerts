@@ -1,0 +1,35 @@
+name: Weekly Email Digest (PRODUCTION)
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Every Monday at 7am UTC
+  workflow_dispatch:       # Allow manual trigger
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    environment: production  # Uses production secrets
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main  # ALWAYS runs from main — never develop
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run weekly digest (PRODUCTION)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          TEST_MODE: "false"
+        run: python scripts/weekly_digest.py

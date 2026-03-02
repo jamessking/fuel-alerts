@@ -971,6 +971,17 @@ def main():
     email_from   = require_env("EMAIL_FROM")
     site_url     = require_env("SITE_URL").rstrip("/")
 
+    # ── TEST MODE ──────────────────────────────────────────────────────────
+    # When TEST_MODE=true, only sends to TEST_EMAIL — never touches real users
+    test_mode  = os.getenv("TEST_MODE", "false").lower() == "true"
+    test_email = os.getenv("TEST_EMAIL", "")
+    if test_mode:
+        if not test_email:
+            raise RuntimeError("TEST_MODE is true but TEST_EMAIL is not set!")
+        print(f"⚠️  TEST MODE — will only send to {test_email}")
+        print(f"⚠️  Supabase: {supabase_url}")
+    # ──────────────────────────────────────────────────────────────────────
+
     sender_email = email_from
     if "<" in email_from and ">" in email_from:
         sender_email = email_from.split("<", 1)[1].split(">", 1)[0].strip()
@@ -982,6 +993,12 @@ def main():
     if not subscribers:
         print("No active subscribers. Exiting.")
         return
+
+    # In test mode — replace list with single test entry using first sub's settings
+    if test_mode:
+        real_sub = subscribers[0]
+        subscribers = [{ **real_sub, "email": test_email }]
+        print(f"⚠️  TEST MODE — 1 email to {test_email} using settings from {real_sub.get('postcode')}")
 
     print("Fetching stations...")
     stations_raw = supabase_get_stations(supabase_url, supabase_key)

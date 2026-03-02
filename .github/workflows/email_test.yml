@@ -1,0 +1,33 @@
+name: Weekly Email Digest (TEST)
+
+on:
+  workflow_dispatch:  # Manual trigger ONLY — never runs automatically
+
+jobs:
+  send-test-digest:
+    runs-on: ubuntu-latest
+    environment: test  # Uses test secrets
+
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        # No ref: — runs from whatever branch you trigger it on
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run weekly digest (TEST MODE)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_TEST }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_TEST }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SITE_URL: "https://fuelalert.co.uk"
+          TEST_MODE: "true"
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+        run: python scripts/weekly_digest.py
