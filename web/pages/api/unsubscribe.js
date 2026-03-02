@@ -62,13 +62,29 @@ export default async function handler(req, res) {
   const token = req.method === 'GET' ? req.query.token : req.body.token
   if (!token) return res.status(400).json({ error: 'No token provided' })
 
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+  // Try plain token first (new subscribers), fall back to hash lookup (old subscribers)
+  let subscriber = null
+  let error = null
 
-  const { data: subscriber, error } = await supabase
+  const byToken = await supabase
     .from('subscribers')
     .select('id, status, lat, lon, fuel_type, radius_miles, postcode, created_at')
-    .eq('unsubscribe_token_hash', tokenHash)
+    .eq('unsubscribe_token', token)
     .single()
+
+  if (byToken.data) {
+    subscriber = byToken.data
+  } else {
+    // Legacy: token in URL is raw, hash it to find old-style subscribers
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+    const byHash = await supabase
+      .from('subscribers')
+      .select('id, status, lat, lon, fuel_type, radius_miles, postcode, created_at')
+      .eq('unsubscribe_token_hash', tokenHash)
+      .single()
+    subscriber = byHash.data
+    error = byHash.error
+  }
 
   if (error || !subscriber) {
     return res.status(404).json({ error: 'Invalid unsubscribe link.' })
