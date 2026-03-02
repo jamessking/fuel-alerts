@@ -107,9 +107,12 @@ export default function Confirm() {
                       <div key={i} className={`${styles.stationRow} ${i === 0 ? styles.stationRowBest : ''}`}>
                         <div className={styles.stationRank}>
                           {i === 0 ? '🏆' : `#${i + 1}`}
+                          {s.logo_url && (
+                            <img src={s.logo_url} alt="" style={{width:'36px',height:'24px',objectFit:'contain',marginTop:'4px'}} onError={e => e.target.style.display='none'} />
+                          )}
                         </div>
                         <div className={styles.stationInfo}>
-                          <div className={styles.stationName}>{s.name || s.brand || 'Station'}</div>
+                          <div className={styles.stationName}>{s.display_name || s.trading_name || s.brand_name || 'Station'}</div>
                           <div className={styles.stationMeta}>
                             {s.address && <span>{s.address}</span>}
                             {s.distance_miles != null && (

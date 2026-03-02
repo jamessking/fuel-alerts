@@ -1,0 +1,78 @@
+/* ── Vehicle Card ─────────────────────────────── */
+.vehicleCard {
+  margin-top: 12px;
+  background: rgba(0, 230, 118, 0.05);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vehicleCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vehicleCardCheck {
+  color: #00e676;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.vehicleCardTitle {
+  font-weight: 700;
+  font-size: 15px;
+  color: #f0f4ff;
+  letter-spacing: 0.01em;
+}
+
+.vehicleCardDetails {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vehicleCardDetails span {
+  font-size: 12px;
+  color: #8899bb;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+
+/* MOT / Tax status rows */
+.motOk {
+  font-size: 12px;
+  color: #00e676;
+}
+
+.motAlert {
+  font-size: 12px;
+  color: #ff5252;
+  font-weight: 600;
+}
+
+.motWarning {
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 82, 82, 0.15);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.taxOk {
+  font-size: 12px;
+  color: #8899bb;
+}
+
+.taxWarning {
+  font-size: 12px;
+  color: #ffab40;
+  font-weight: 600;
+}

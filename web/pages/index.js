@@ -111,6 +111,7 @@ export default function Home() {
           annual_miles: annualMiles ? parseInt(annualMiles) : null,
           mpg: mpg ? parseFloat(mpg) : null,
           tank_litres: tankLitres ? parseFloat(tankLitres) : null,
+          vehicle: regInfo ? { ...regInfo, reg: reg.replace(/\s/g, '').toUpperCase() } : null,
         })
       })
       const data = await res.json()
@@ -295,8 +296,35 @@ export default function Home() {
                     </div>
                     {regError && <div className={styles.fieldError}>{regError}</div>}
                     {regInfo && (
-                      <div className={styles.regResult}>
-                        ✓ {regInfo.make} {regInfo.model} · {regInfo.year} · {regInfo.fuelType}
+                      <div className={styles.vehicleCard}>
+                        <div className={styles.vehicleCardHeader}>
+                          <span className={styles.vehicleCardCheck}>✓</span>
+                          <span className={styles.vehicleCardTitle}>{regInfo.make} · {regInfo.year} · {regInfo.colour}</span>
+                        </div>
+                        <div className={styles.vehicleCardDetails}>
+                          <span>{regInfo.fuelTypeRaw}</span>
+                          {regInfo.engineCapacity && <span>{(regInfo.engineCapacity / 1000).toFixed(1)}L</span>}
+                          {regInfo.co2Emissions && <span>{regInfo.co2Emissions}g CO₂</span>}
+                          {regInfo.euroStatus && <span>{regInfo.euroStatus}</span>}
+                        </div>
+                        {regInfo.motExpired ? (
+                          <div className={styles.motWarning}>
+                            ⚠️ MOT EXPIRED — this vehicle may not be road legal
+                          </div>
+                        ) : regInfo.motDaysRemaining !== null && regInfo.motDaysRemaining <= 30 ? (
+                          <div className={styles.motAlert}>
+                            🔴 MOT expires in {regInfo.motDaysRemaining} day{regInfo.motDaysRemaining === 1 ? '' : 's'} ({regInfo.motExpiryDate})
+                          </div>
+                        ) : regInfo.motExpiryDate ? (
+                          <div className={styles.motOk}>
+                            ✓ MOT valid until {regInfo.motExpiryDate} ({regInfo.motDaysRemaining} days)
+                          </div>
+                        ) : null}
+                        {regInfo.taxStatus && (
+                          <div className={regInfo.taxStatus === 'Taxed' ? styles.taxOk : styles.taxWarning}>
+                            {regInfo.taxStatus === 'Taxed' ? '✓' : '⚠️'} Tax: {regInfo.taxStatus}{regInfo.taxDueDate ? ` (due ${regInfo.taxDueDate})` : ''}
+                          </div>
+                        )}
                       </div>
                     )}
 
