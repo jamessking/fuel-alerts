@@ -6,31 +6,27 @@ on:
 jobs:
   send-test-digest:
     runs-on: ubuntu-latest
-<<<<<<< HEAD
     environment: fuel_alerts  # Same secrets as production
-=======
-    environment: fuel_alerts  # Uses test secrets
->>>>>>> c7bc04d9f7388021364b47ca24d490e4ca5c4aa6
 
-    steps:
-      - name: Checkout current branch
-        uses: actions/checkout@v4
+steps:
+  - name: Checkout current branch
+    uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install requests python-dotenv
+  - name: Install dependencies
+    run: pip install requests python-dotenv
 
-      - name: Run weekly digest (TEST MODE)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          SITE_URL: ${{ secrets.SITE_URL }}
-          TEST_MODE: "true"
-          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
-        run: python scripts/weekly_digest.py
+  - name: Run weekly digest (TEST MODE)
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      SITE_URL: ${{ secrets.SITE_URL }}
+      TEST_MODE: "true"
+      TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+    run: python scripts/weekly_digest.py
