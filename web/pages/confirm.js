@@ -139,7 +139,7 @@ export default function Confirm() {
 
                   {data.stations.length > 1 && (
 					  <div className={styles.savingsTip}>
-						{(() => {
+                    {(() => {
 						  const priceDiffP = data.stations[data.stations.length - 1].price - data.stations[0].price
 						  const tankSaving = (priceDiffP / 100) * 55
 						  const annualSaving = data.annual_miles && data.mpg
@@ -152,14 +152,15 @@ export default function Confirm() {
 						  </>
 						})()}
 					  </div>
-					 	<ShareFuel
-						  carMake={data.car_make}
-						  stationName={data.stations?.[0]?.display_name}
-						  price={data.stations?.[0]?.price}
-						  fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
-						  postcode={data.postcode}
-						/>
-					)}
+					  <ShareFuel
+						carMake={data.car_make}
+						stationName={data.stations?.[0]?.display_name}
+						price={data.stations?.[0]?.price}
+						fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
+						postcode={data.postcode}
+					  />
+					</div>
+				  )}
 
               {data.stations && data.stations.length === 0 && (
                 <div className={styles.noStations}>
