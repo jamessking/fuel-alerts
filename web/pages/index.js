@@ -233,19 +233,16 @@ export default function Home() {
               </div>
             )}
 
-            <div className={styles.ctaBanner}>
-              <div className={styles.ctaBannerInner}>
-                <div className={styles.ctaBannerText}>
-                  <span className={styles.ctaBannerTitle}>Get your local prices every Monday</span>
-                  <span className={styles.ctaBannerSub}>Free weekly digest · No app · Unsubscribe anytime</span>
-                </div>
-                <div className={styles.ctaBannerArrow}>
-                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="24" cy="24" r="23" stroke="#00e676" strokeWidth="2"/>
-                    <path d="M24 14v20M14 30l10 10 10-10" stroke="#00e676" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </div>
+            <div className={styles.tableFooterCta}>
+              <span className={styles.tableFooterCtaDot} />
+              Subscribe to get the cheapest price near your postcode every Monday —{' '}
+              <a href="#signup" className={styles.tableFooterCtaLink} onClick={e => {
+                e.preventDefault()
+                document.querySelector('input[placeholder="e.g. NG1 1AA"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                document.querySelector('input[placeholder="e.g. NG1 1AA"]')?.focus()
+              }}>
+                it's free →
+              </a>
             </div>
 
             <div className={`${styles.heroStats} animate-fade-up delay-4`}>

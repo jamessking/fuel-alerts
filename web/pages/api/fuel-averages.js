@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         .from('fuel_prices_daily')
         .select('node_id, fuel_type, price')
         .eq('snapshot_date', today)
-        .in('fuel_type', ['E10', 'B7']),
+        .in('fuel_type', ['E10', 'B7', 'B7_STANDARD']),
       supabase
         .from('pfs_stations')
         .select('node_id, country, is_motorway_service_station, is_supermarket_service_station'),
@@ -52,7 +52,9 @@ export default async function handler(req, res) {
       : null
 
     const build = (fuel) => {
-      const rows = prices.filter(p => p.fuel_type === fuel)
+      // Accept both B7 and B7_STANDARD as diesel
+      const fuelCodes = fuel === 'B7' ? ['B7', 'B7_STANDARD'] : [fuel]
+      const rows = prices.filter(p => fuelCodes.includes(p.fuel_type))
 
       const byCountry = (country) =>
         rows.filter(p => (p.station?.country || '').toLowerCase() === country.toLowerCase())
