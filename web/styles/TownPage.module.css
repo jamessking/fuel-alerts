@@ -1,0 +1,93 @@
+.page { min-height: 100vh; background: #0a0f1e; color: #f0f4ff; font-family: 'DM Sans', Arial, sans-serif; }
+
+/* Nav */
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid #1e2d4a; background: rgba(10,15,30,0.9); position: sticky; top: 0; z-index: 10; flex-wrap: wrap; gap: 0.5rem; }
+.logo { font-weight: 800; font-size: 1.1rem; color: #f0f4ff; text-decoration: none; }
+.breadcrumb { font-size: 0.8rem; color: #4a5a7a; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.breadcrumb a { color: #8899bb; text-decoration: none; } .breadcrumb a:hover { color: #00e676; }
+
+/* Header */
+.header { background: linear-gradient(135deg, rgba(0,230,118,0.06) 0%, transparent 60%); border-bottom: 1px solid #1e2d4a; padding: 3rem 2rem 2.5rem; }
+.headerInner { max-width: 860px; margin: 0 auto; }
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 600; color: #00e676; background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.2); border-radius: 999px; padding: 0.3rem 0.8rem; margin-bottom: 1rem; }
+.header h1 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.75rem; line-height: 1.15; }
+.accent { color: #00e676; }
+.sub { font-size: 1rem; color: #8899bb; line-height: 1.6; max-width: 600px; }
+
+/* Main */
+.main { max-width: 860px; margin: 0 auto; padding: 2rem; display: flex; flex-direction: column; gap: 2.5rem; }
+
+/* Snapshot cards */
+.snapshotGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.snapshotCard { background: #111827; border: 1px solid #1e2d4a; border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.snapshotLabel { font-size: 0.75rem; font-weight: 600; color: #4a5a7a; text-transform: uppercase; letter-spacing: 0.06em; }
+.snapshotPrice { font-size: 2rem; font-weight: 800; color: #00e676; letter-spacing: -0.02em; }
+.snapshotStation { font-size: 0.85rem; color: #8899bb; }
+.deltaUp { font-size: 0.78rem; font-weight: 700; color: #ff6b4a; }
+.deltaDown { font-size: 0.78rem; font-weight: 700; color: #00e676; }
+
+/* Story card */
+.storyCard { background: #111827; border: 1px solid #1e2d4a; border-radius: 14px; padding: 1.5rem 2rem; }
+.storyCard h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; }
+.storyCard p { font-size: 0.9rem; color: #8899bb; line-height: 1.7; margin-bottom: 0.5rem; }
+.storyCard p strong { color: #f0f4ff; }
+
+/* Chart */
+.chartSection { }
+.chartSection h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+.chartWrap { background: #111827; border: 1px solid #1e2d4a; border-radius: 14px; padding: 1rem; }
+.chart { width: 100%; height: auto; display: block; }
+.chartLegend { display: flex; gap: 1.5rem; margin-top: 0.5rem; font-size: 0.78rem; }
+.legendPetrol { color: #00e676; font-weight: 600; }
+.legendDiesel { color: #64b4ff; font-weight: 600; }
+
+/* Top 5 */
+.top5Section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+.stationList { display: flex; flex-direction: column; gap: 0.5rem; }
+.stationRow { display: flex; align-items: center; gap: 0.75rem; background: #111827; border: 1px solid #1e2d4a; border-radius: 10px; padding: 0.75rem 1rem; transition: border-color 0.15s; }
+.stationRow:hover { border-color: rgba(0,230,118,0.2); }
+.stationRowBest { border-color: rgba(0,230,118,0.35); background: rgba(0,230,118,0.04); }
+.stationRank { font-size: 1rem; width: 28px; flex-shrink: 0; text-align: center; }
+.stationLogo { width: 36px; height: 24px; object-fit: contain; flex-shrink: 0; }
+.stationInfo { flex: 1; min-width: 0; }
+.stationName { font-size: 0.9rem; font-weight: 600; color: #f0f4ff; }
+.stationMeta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 2px; }
+.fuelBadge { font-size: 10px; background: rgba(0,230,118,0.1); color: #00e676; border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+.superBadge { font-size: 10px; background: rgba(100,180,255,0.1); color: #64b4ff; border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+.stationMeta span { font-size: 11px; color: #4a5a7a; }
+.stationPrice { font-size: 1.1rem; font-weight: 800; color: #00e676; flex-shrink: 0; margin-left: auto; }
+
+/* Share */
+.shareSection { }
+
+/* CTA */
+.ctaCard { background: linear-gradient(135deg, rgba(0,230,118,0.1) 0%, rgba(0,200,83,0.05) 100%); border: 1px solid rgba(0,230,118,0.3); border-radius: 16px; padding: 2rem; text-align: center; }
+.ctaCard h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+.ctaCard p { color: #8899bb; font-size: 0.9rem; margin-bottom: 1.25rem; }
+.ctaBtn { display: inline-block; background: #00e676; color: #0a0f1e; font-weight: 700; font-size: 0.95rem; padding: 0.85rem 2rem; border-radius: 10px; text-decoration: none; transition: all 0.2s; }
+.ctaBtn:hover { background: #00f080; transform: translateY(-1px); }
+
+/* Internal links */
+.internalLinks h3 { font-size: 0.9rem; font-weight: 700; color: #4a5a7a; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.linkGrid { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.internalLink { font-size: 0.85rem; color: #8899bb; text-decoration: none; background: #111827; border: 1px solid #1e2d4a; border-radius: 8px; padding: 0.5rem 0.9rem; transition: all 0.15s; }
+.internalLink:hover { border-color: rgba(0,230,118,0.3); color: #00e676; }
+
+/* Town grid (region/country pages) */
+.townGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+.townCard { background: #111827; border: 1px solid #1e2d4a; border-radius: 10px; padding: 1rem; text-decoration: none; transition: all 0.15s; display: flex; flex-direction: column; gap: 0.25rem; }
+.townCard:hover { border-color: rgba(0,230,118,0.3); }
+.townName { font-size: 0.9rem; font-weight: 700; color: #f0f4ff; }
+.townMeta { font-size: 0.75rem; color: #4a5a7a; }
+.townPrice { font-size: 0.85rem; font-weight: 700; color: #00e676; }
+
+/* Not found */
+.notFound { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 1rem; color: #8899bb; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .header { padding: 2rem 1rem 1.5rem; }
+  .main { padding: 1rem; }
+  .snapshotGrid { grid-template-columns: 1fr 1fr; }
+  .nav { padding: 0.75rem 1rem; }
+}
