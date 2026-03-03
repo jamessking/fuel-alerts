@@ -152,8 +152,7 @@ export default function Confirm() {
 						  </>
 						})()}
 					  </div>
-					 	// Inside the success section, after savingsTip div:
-						<ShareFuel
+					 	<ShareFuel
 						  carMake={data.car_make}
 						  stationName={data.stations?.[0]?.display_name}
 						  price={data.stations?.[0]?.price}

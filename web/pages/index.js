@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import { useState, useEffect, useRef } from 'react'
 import styles from '../styles/Home.module.css'
-import { Analytics } from "@vercel/analytics/next"
 
 export default function Home() {
   const [postcode, setPostcode] = useState('')
