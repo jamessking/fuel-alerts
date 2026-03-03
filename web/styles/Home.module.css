@@ -456,10 +456,10 @@ details[open] .optionalToggle::after {
   padding: 0.3rem 0;
 }
 
-.vehicleFields {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
+ .vehicleFields {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 0.5rem;
 }
 
 .miniField {
@@ -1208,8 +1208,14 @@ details[open] .optionalToggle::after {
 }
 
 .stepperBtn:hover { background: rgba(136,153,187,0.2); }
-.stepperInput { text-align: center; flex: 1; min-width: 0; }
-
+ .stepperValue {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f0f4ff;
+  padding: 8px 0;
+}
 /* Station count */
 .stationCount {
   font-size: 11px;
