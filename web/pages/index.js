@@ -233,6 +233,13 @@ export default function Home() {
               </div>
             )}
 
+            <div className={styles.ctaArrow}>
+              <div className={styles.ctaArrowText}>
+                Find your local best price weekly
+              </div>
+              <div className={styles.ctaArrowIcon}>↑</div>
+            </div>
+
             <div className={`${styles.heroStats} animate-fade-up delay-4`}>
               <div className={styles.stat}>
                 <span className={styles.statNum}>7,150+</span>

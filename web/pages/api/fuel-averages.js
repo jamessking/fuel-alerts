@@ -6,36 +6,47 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
-// Cache in memory — resets on Vercel cold start but good enough for daily data
 let cache = null
 let cacheTime = null
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS = 60 * 60 * 1000
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  // Return cached data if fresh
   if (cache && cacheTime && Date.now() - cacheTime < CACHE_TTL_MS) {
     return res.status(200).json(cache)
   }
 
   try {
-    // Get today's prices joined with station country data
     const today = new Date().toISOString().split('T')[0]
 
-    const { data: prices, error } = await supabase
-      .from('fuel_prices_daily')
-      .select(`
-        fuel_type,
-        price,
-        pfs_stations!inner(country, is_motorway_service_station, is_supermarket_service_station)
-      `)
-      .eq('snapshot_date', today)
-      .in('fuel_type', ['E10', 'B7'])
+    // Fetch prices and stations separately then join in memory
+    const [pricesRes, stationsRes] = await Promise.all([
+      supabase
+        .from('fuel_prices_daily')
+        .select('node_id, fuel_type, price')
+        .eq('snapshot_date', today)
+        .in('fuel_type', ['E10', 'B7']),
+      supabase
+        .from('pfs_stations')
+        .select('node_id, country, is_motorway_service_station, is_supermarket_service_station'),
+    ])
 
-    if (error) throw error
+    if (pricesRes.error) throw pricesRes.error
+    if (stationsRes.error) throw stationsRes.error
 
-    // Helper to avg prices
+    // Index stations by node_id
+    const stationMap = {}
+    for (const s of stationsRes.data) {
+      stationMap[s.node_id] = s
+    }
+
+    // Join
+    const prices = pricesRes.data.map(p => ({
+      ...p,
+      station: stationMap[p.node_id] || {},
+    }))
+
     const avg = (arr) => arr.length
       ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length * 10) / 10
       : null
@@ -44,20 +55,13 @@ export default async function handler(req, res) {
       const rows = prices.filter(p => p.fuel_type === fuel)
 
       const byCountry = (country) =>
-        rows.filter(p => (p.pfs_stations?.country || '').toUpperCase() === country.toUpperCase())
+        rows.filter(p => (p.station?.country || '').toLowerCase() === country.toLowerCase())
 
-      const motorway = (subset) =>
-        subset.filter(p => p.pfs_stations?.is_motorway_service_station === true)
-
-      const supermarket = (subset) =>
-        subset.filter(p => p.pfs_stations?.is_supermarket_service_station === true)
-
-      const forecourt = (subset) =>
-        subset.filter(p =>
-          !p.pfs_stations?.is_motorway_service_station &&
-          !p.pfs_stations?.is_supermarket_service_station
-        )
-
+      const motorway = (subset) => subset.filter(p => p.station?.is_motorway_service_station === true)
+      const supermarket = (subset) => subset.filter(p => p.station?.is_supermarket_service_station === true)
+      const forecourt = (subset) => subset.filter(p =>
+        !p.station?.is_motorway_service_station && !p.station?.is_supermarket_service_station
+      )
       const toP = (subset) => subset.map(p => parseFloat(p.price)).filter(Boolean)
 
       const summary = (subset) => ({
@@ -67,17 +71,12 @@ export default async function handler(req, res) {
         forecourt: avg(toP(forecourt(subset))),
       })
 
-      const england = byCountry('England')
-      const scotland = byCountry('Scotland')
-      const wales = byCountry('Wales')
-      const ni = byCountry('Northern Ireland')
-
       return {
         uk: summary(rows),
-        england: summary(england),
-        scotland: summary(scotland),
-        wales: summary(wales),
-        ni: summary(ni),
+        england: summary(byCountry('england')),
+        scotland: summary(byCountry('scotland')),
+        wales: summary(byCountry('wales')),
+        ni: summary(byCountry('northern ireland')),
       }
     }
 
