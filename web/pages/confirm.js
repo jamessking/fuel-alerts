@@ -154,7 +154,7 @@ export default function Confirm() {
 					  </div>
 					 	// Inside the success section, after savingsTip div:
 						<ShareFuel
-						  carMake={data.car_make}         // needs passing from API
+						  carMake={data.car_make}
 						  stationName={data.stations?.[0]?.display_name}
 						  price={data.stations?.[0]?.price}
 						  fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
