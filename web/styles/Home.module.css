@@ -900,3 +900,92 @@ details[open] .optionalToggle::after {
     grid-template-columns: 1fr;
   }
 }
+/* ── Live Price Table ─────────────────────────────── */
+.priceTableWrap {
+  margin-top: 24px;
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid #1e2d4a;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.priceTableTabs {
+  display: flex;
+  border-bottom: 1px solid #1e2d4a;
+}
+
+.priceTab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: #8899bb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.priceTab:hover {
+  color: #f0f4ff;
+  background: rgba(255,255,255,0.03);
+}
+
+.priceTabActive {
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.07);
+  border-bottom: 2px solid #00e676;
+}
+
+.priceTable {
+  padding: 4px 0;
+}
+
+.priceTableHeader {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.2fr 1fr;
+  padding: 8px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a5a7a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.priceTableRow {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.2fr 1fr;
+  padding: 9px 16px;
+  font-size: 13px;
+  color: #8899bb;
+  border-top: 1px solid rgba(30, 45, 74, 0.5);
+  transition: background 0.1s;
+}
+
+.priceTableRow:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.priceTableRow:first-of-type {
+  border-top: none;
+}
+
+.priceTableRegion {
+  color: #f0f4ff;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.priceTableAvg {
+  color: #00e676;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.priceTableFooter {
+  padding: 8px 16px;
+  font-size: 10px;
+  color: #4a5a7a;
+  border-top: 1px solid rgba(30, 45, 74, 0.5);
+  text-align: right;
+}

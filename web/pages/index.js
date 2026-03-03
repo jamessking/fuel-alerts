@@ -23,8 +23,17 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [priceData, setPriceData] = useState(null)
+  const [priceTab, setPriceTab] = useState('unleaded')
 
   const postcodeTimer = useRef(null)
+
+  useEffect(() => {
+    fetch('/api/fuel-averages')
+      .then(r => r.json())
+      .then(d => { if (!d.error) setPriceData(d) })
+      .catch(() => {})
+  }, [])
 
   // Postcode lookup with debounce
   useEffect(() => {
@@ -166,13 +175,64 @@ export default function Home() {
               🇬🇧 UK Government fuel data · Updated daily
             </div>
             <h1 className={`${styles.heroTitle} animate-fade-up delay-2`}>
-              Stop guessing.<br />
-              <span className={styles.accent}>Start saving.</span>
+              UK ave price today.<br />
+              <span className={styles.accent}>Find yours cheaper.</span>
             </h1>
             <p className={`${styles.heroSub} animate-fade-up delay-3`}>
               FuelAlerts watches 7,150+ UK fuel stations so you don't have to.
               Get the cheapest prices near you delivered to your inbox — before prices go up.
             </p>
+
+            {/* Live price table */}
+            {priceData && (
+              <div className={`${styles.priceTableWrap} animate-fade-up delay-4`}>
+                <div className={styles.priceTableTabs}>
+                  <button
+                    className={`${styles.priceTab} ${priceTab === 'unleaded' ? styles.priceTabActive : ''}`}
+                    onClick={() => setPriceTab('unleaded')}
+                  >⛽ Unleaded</button>
+                  <button
+                    className={`${styles.priceTab} ${priceTab === 'diesel' ? styles.priceTabActive : ''}`}
+                    onClick={() => setPriceTab('diesel')}
+                  >🛢 Diesel</button>
+                </div>
+                {(() => {
+                  const d = priceData[priceTab]
+                  const rows = [
+                    { label: '🇬🇧 UK', data: d.uk },
+                    { label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England', data: d.england },
+                    { label: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland', data: d.scotland },
+                    { label: '🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales', data: d.wales },
+                    { label: '🇬🇧 N. Ireland', data: d.ni },
+                  ]
+                  const fmt = (v) => v ? `${v.toFixed(1)}p` : '—'
+                  return (
+                    <div className={styles.priceTable}>
+                      <div className={styles.priceTableHeader}>
+                        <span></span>
+                        <span>Avg</span>
+                        <span>Motorway</span>
+                        <span>Supermarket</span>
+                        <span>Forecourt</span>
+                      </div>
+                      {rows.map(row => (
+                        <div key={row.label} className={styles.priceTableRow}>
+                          <span className={styles.priceTableRegion}>{row.label}</span>
+                          <span className={styles.priceTableAvg}>{fmt(row.data?.avg)}</span>
+                          <span>{fmt(row.data?.motorway)}</span>
+                          <span>{fmt(row.data?.supermarket)}</span>
+                          <span>{fmt(row.data?.forecourt)}</span>
+                        </div>
+                      ))}
+                      <div className={styles.priceTableFooter}>
+                        Updated {priceData.updatedAt ? new Date(priceData.updatedAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : 'today'}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
             <div className={`${styles.heroStats} animate-fade-up delay-4`}>
               <div className={styles.stat}>
                 <span className={styles.statNum}>7,150+</span>
