@@ -441,7 +441,7 @@ export default function Home() {
                     <div className={styles.miniField}>
                       <label className={styles.labelSmall}>Annual miles</label>
                       <div className={styles.stepperRow}>
-                        <button type="button" className={styles.stepperBtn} onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000))}>−</button>
+                        <button type="button" className={styles.stepperBtn} onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000)))}>−</button>
                         <input className={`${styles.input} ${styles.stepperInput}`} type="number" value={annualMiles} onChange={e => setAnnualMiles(e.target.value)} />
                         <button type="button" className={styles.stepperBtn} onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
                       </div>
