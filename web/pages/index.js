@@ -366,7 +366,7 @@ export default function Home() {
                     Search radius
                     {postcodeInfo && (
                       <span className={styles.stationCount}>
-                        {stationCountLoading ? ' · checking...' : stationCount !== null ? ` · ${stationCount} station${stationCount !== 1 ? 's' : ''} nearby` : ''}
+                        {stationCountLoading ? ' · checking...' : stationCount !== null ? ` · ~${stationCount} stations nearby` : ''}
                       </span>
                     )}
                   </label>

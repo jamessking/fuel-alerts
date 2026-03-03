@@ -15,16 +15,14 @@ export default async function handler(req, res) {
     const lonF = parseFloat(lon)
     const r = parseInt(radius)
 
-    // Bounding box approximation — fast, no full table scan
-    // ~1 degree lat = 69 miles
     const latDelta = r / 69
     const lonDelta = r / (69 * Math.cos(latF * Math.PI / 180))
 
     const { count, error } = await supabase
       .from('pfs_stations')
       .select('node_id', { count: 'exact', head: true })
-      .eq('permanent_closure', false)
-      .eq('temporary_closure', false)
+      .neq('permanent_closure', true)   // include NULL and false
+      .neq('temporary_closure', true)   // include NULL and false
       .gte('latitude', latF - latDelta)
       .lte('latitude', latF + latDelta)
       .gte('longitude', lonF - lonDelta)
@@ -33,7 +31,8 @@ export default async function handler(req, res) {
     if (error) throw error
 
     res.setHeader('Cache-Control', 's-maxage=3600')
-    res.status(200).json({ count: count ?? 0 })
+    // Label as estimated since bbox is a square not a circle
+    res.status(200).json({ count: count ?? 0, estimated: true })
   } catch (err) {
     console.error('station-count error:', err)
     res.status(500).json({ count: null })
