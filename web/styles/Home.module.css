@@ -1021,34 +1021,40 @@ details[open] .optionalToggle::after {
   text-decoration: underline;
 }
 
-/* ── Mobile: simplify table ─────────────────────────────── */
+/* ── Week delta colours ─────────────────────────────── */
+.deltaUp {
+  color: #ff6b4a;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.deltaDown {
+  color: #00e676;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.deltaNeutral {
+  color: #8899bb;
+  font-size: 12px;
+}
+
+/* Mobile: hide motorway/supermarket/forecourt, keep avg + delta */
 @media (max-width: 768px) {
   .priceTableHeader {
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1.4fr 1fr 1fr !important;
   }
-
-  .priceTableHeader span:nth-child(3),
   .priceTableHeader span:nth-child(4),
-  .priceTableHeader span:nth-child(5) {
+  .priceTableHeader span:nth-child(5),
+  .priceTableHeader span:nth-child(6) {
     display: none;
   }
-
   .priceTableRow {
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1.4fr 1fr 1fr !important;
   }
-
-  .priceTableRow span:nth-child(3),
   .priceTableRow span:nth-child(4),
-  .priceTableRow span:nth-child(5) {
+  .priceTableRow span:nth-child(5),
+  .priceTableRow span:nth-child(6) {
     display: none;
-  }
-
-  .ctaArrowIcon {
-    content: "↓";
-    transform: rotate(180deg);
-  }
-
-  .ctaArrow {
-    flex-direction: row-reverse;
   }
 }

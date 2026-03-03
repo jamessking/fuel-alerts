@@ -18,14 +18,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date()
+    const weekAgo = new Date(today)
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const todayStr = today.toISOString().split('T')[0]
+    const weekAgoStr = weekAgo.toISOString().split('T')[0]
 
-    // Fetch prices and stations separately then join in memory
-    const [pricesRes, stationsRes] = await Promise.all([
+    const [pricesRes, weekAgoRes, stationsRes] = await Promise.all([
       supabase
         .from('fuel_prices_daily')
         .select('node_id, fuel_type, price')
-        .eq('snapshot_date', today)
+        .eq('snapshot_date', todayStr)
+        .in('fuel_type', ['E10', 'B7', 'B7_STANDARD']),
+      supabase
+        .from('fuel_prices_daily')
+        .select('node_id, fuel_type, price')
+        .eq('snapshot_date', weekAgoStr)
         .in('fuel_type', ['E10', 'B7', 'B7_STANDARD']),
       supabase
         .from('pfs_stations')
@@ -35,50 +43,52 @@ export default async function handler(req, res) {
     if (pricesRes.error) throw pricesRes.error
     if (stationsRes.error) throw stationsRes.error
 
-    // Index stations by node_id
     const stationMap = {}
-    for (const s of stationsRes.data) {
-      stationMap[s.node_id] = s
-    }
+    for (const s of stationsRes.data) stationMap[s.node_id] = s
 
-    // Join
-    const prices = pricesRes.data.map(p => ({
-      ...p,
-      station: stationMap[p.node_id] || {},
-    }))
+    const enrich = (rows) => rows.map(p => ({ ...p, station: stationMap[p.node_id] || {} }))
+    const prices = enrich(pricesRes.data)
+    const lastWeekPrices = enrich(weekAgoRes.data || [])
 
     const avg = (arr) => arr.length
       ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length * 10) / 10
       : null
 
+    const toP = (subset) => subset.map(p => parseFloat(p.price)).filter(Boolean)
+
     const build = (fuel) => {
-      // Accept both B7 and B7_STANDARD as diesel
       const fuelCodes = fuel === 'B7' ? ['B7', 'B7_STANDARD'] : [fuel]
       const rows = prices.filter(p => fuelCodes.includes(p.fuel_type))
+      const lastRows = lastWeekPrices.filter(p => fuelCodes.includes(p.fuel_type))
 
-      const byCountry = (country) =>
-        rows.filter(p => (p.station?.country || '').toLowerCase() === country.toLowerCase())
+      const byCountry = (src, country) =>
+        src.filter(p => (p.station?.country || '').toLowerCase() === country.toLowerCase())
 
-      const motorway = (subset) => subset.filter(p => p.station?.is_motorway_service_station === true)
-      const supermarket = (subset) => subset.filter(p => p.station?.is_supermarket_service_station === true)
-      const forecourt = (subset) => subset.filter(p =>
-        !p.station?.is_motorway_service_station && !p.station?.is_supermarket_service_station
-      )
-      const toP = (subset) => subset.map(p => parseFloat(p.price)).filter(Boolean)
+      const motorway = (s) => s.filter(p => p.station?.is_motorway_service_station === true)
+      const supermarket = (s) => s.filter(p => p.station?.is_supermarket_service_station === true)
+      const forecourt = (s) => s.filter(p => !p.station?.is_motorway_service_station && !p.station?.is_supermarket_service_station)
 
-      const summary = (subset) => ({
-        avg: avg(toP(subset)),
-        motorway: avg(toP(motorway(subset))),
-        supermarket: avg(toP(supermarket(subset))),
-        forecourt: avg(toP(forecourt(subset))),
-      })
+      const summary = (subset, lastSubset) => {
+        const curAvg = avg(toP(subset))
+        const prevAvg = avg(toP(lastSubset))
+        const weekDelta = curAvg !== null && prevAvg !== null
+          ? Math.round((curAvg - prevAvg) * 10) / 10
+          : null
+        return {
+          avg: curAvg,
+          weekDelta,
+          motorway: avg(toP(motorway(subset))),
+          supermarket: avg(toP(supermarket(subset))),
+          forecourt: avg(toP(forecourt(subset))),
+        }
+      }
 
       return {
-        uk: summary(rows),
-        england: summary(byCountry('england')),
-        scotland: summary(byCountry('scotland')),
-        wales: summary(byCountry('wales')),
-        ni: summary(byCountry('northern ireland')),
+        uk:      summary(rows, lastRows),
+        england: summary(byCountry(rows, 'england'), byCountry(lastRows, 'england')),
+        scotland: summary(byCountry(rows, 'scotland'), byCountry(lastRows, 'scotland')),
+        wales:   summary(byCountry(rows, 'wales'), byCountry(lastRows, 'wales')),
+        ni:      summary(byCountry(rows, 'northern ireland'), byCountry(lastRows, 'northern ireland')),
       }
     }
 

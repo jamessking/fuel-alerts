@@ -206,24 +206,37 @@ export default function Home() {
                     { label: '🇬🇧 N. Ireland', data: d.ni },
                   ]
                   const fmt = (v) => v ? `${v.toFixed(1)}p` : '—'
+                  const fmtDelta = (v) => {
+                    if (v === null || v === undefined) return null
+                    const sign = v > 0 ? '+' : ''
+                    return `${sign}${v.toFixed(1)}p`
+                  }
                   return (
                     <div className={styles.priceTable}>
                       <div className={styles.priceTableHeader}>
                         <span></span>
                         <span>Avg</span>
+                        <span>vs last week</span>
                         <span>Motorway</span>
                         <span>Supermarket</span>
                         <span>Forecourt</span>
                       </div>
-                      {rows.map(row => (
+                      {rows.map(row => {
+                        const delta = row.data?.weekDelta
+                        const deltaStr = fmtDelta(delta)
+                        return (
                         <div key={row.label} className={styles.priceTableRow}>
                           <span className={styles.priceTableRegion}>{row.label}</span>
                           <span className={styles.priceTableAvg}>{fmt(row.data?.avg)}</span>
+                          <span className={delta === null ? '' : delta > 0 ? styles.deltaUp : delta < 0 ? styles.deltaDown : styles.deltaNeutral}>
+                            {deltaStr || '—'}
+                          </span>
                           <span>{fmt(row.data?.motorway)}</span>
                           <span>{fmt(row.data?.supermarket)}</span>
                           <span>{fmt(row.data?.forecourt)}</span>
                         </div>
-                      ))}
+                        )
+                      })}
                       <div className={styles.priceTableFooter}>
                         Updated {priceData.updatedAt ? new Date(priceData.updatedAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : 'today'}
                       </div>
