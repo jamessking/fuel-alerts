@@ -1,0 +1,12 @@
+.shareWrap { background: rgba(0,230,118,0.04); border: 1px solid rgba(0,230,118,0.15); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.shareLabel { font-size: 12px; font-weight: 700; color: #00e676; text-transform: uppercase; letter-spacing: 0.06em; }
+.shareMessage { font-size: 13px; color: #8899bb; line-height: 1.5; font-style: italic; }
+.shareBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.shareBtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s; font-family: inherit; white-space: nowrap; }
+.shareBtnNative { background: rgba(255,255,255,0.08); color: #f0f4ff; border: 1px solid rgba(255,255,255,0.12); }
+.shareBtnWA { background: #25D366; color: #fff; }
+.shareBtnSMS { background: rgba(100,180,255,0.12); color: #64b4ff; border: 1px solid rgba(100,180,255,0.25); }
+.shareBtnFB { background: #1877F2; color: #fff; }
+.shareBtnCopy { background: rgba(136,153,187,0.1); color: #8899bb; border: 1px solid rgba(136,153,187,0.2); }
+.shareBtn:hover { opacity: 0.85; }
+@media (max-width: 480px) { .shareBtns { display: grid; grid-template-columns: 1fr 1fr; } .shareBtn { justify-content: center; } }

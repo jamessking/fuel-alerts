@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import styles from '../styles/Confirm.module.css'
 import StationCard from '../components/StationCard'
+import ShareFuel from '../components/ShareFuel'
 
 const FUEL_LABELS = {
   E10: 'Unleaded',
@@ -137,19 +138,29 @@ export default function Confirm() {
                   </div>
 
                   {data.stations.length > 1 && (
-                    <div className={styles.savingsTip}>
-                      💰 Choosing the cheapest over the most expensive above saves you{' '}
-                      <strong>
-                        {(data.stations[data.stations.length - 1].price - data.stations[0].price).toFixed(1)}p/litre
-                      </strong>{' '}
-                      — on a full 55L tank that's{' '}
-                      <strong>
-                        £{((data.stations[data.stations.length - 1].price - data.stations[0].price) * 0.55 / 100).toFixed(2)}
-                      </strong>
-                    </div>
-                  )}
-                </div>
-              )}
+					  <div className={styles.savingsTip}>
+						{(() => {
+						  const priceDiffP = data.stations[data.stations.length - 1].price - data.stations[0].price
+						  const tankSaving = (priceDiffP / 100) * 55
+						  const annualSaving = data.annual_miles && data.mpg
+							? (priceDiffP / 100) * ((data.annual_miles / data.mpg) * 4.546)
+							: null
+						  return <>
+							💰 Choosing the cheapest over the priciest saves <strong>{priceDiffP.toFixed(1)}p/litre</strong>
+							{' '}— a full tank saves <strong>£{tankSaving.toFixed(2)}</strong>
+							{annualSaving && <>, and based on your mileage you could save <strong>~£{Math.round(annualSaving)}/yr</strong></>}
+						  </>
+						})()}
+					  </div>
+					 	// Inside the success section, after savingsTip div:
+						<ShareFuel
+						  carMake={data.car_make}         // needs passing from API
+						  stationName={data.stations?.[0]?.display_name}
+						  price={data.stations?.[0]?.price}
+						  fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
+						  postcode={data.postcode}
+						/>
+					)}
 
               {data.stations && data.stations.length === 0 && (
                 <div className={styles.noStations}>
