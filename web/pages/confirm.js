@@ -138,29 +138,33 @@ export default function Confirm() {
                   </div>
 
                   {data.stations.length > 1 && (
-					  <div className={styles.savingsTip}>
-                    {(() => {
-						  const priceDiffP = data.stations[data.stations.length - 1].price - data.stations[0].price
-						  const tankSaving = (priceDiffP / 100) * 55
-						  const annualSaving = data.annual_miles && data.mpg
-							? (priceDiffP / 100) * ((data.annual_miles / data.mpg) * 4.546)
-							: null
-						  return <>
-							💰 Choosing the cheapest over the priciest saves <strong>{priceDiffP.toFixed(1)}p/litre</strong>
-							{' '}— a full tank saves <strong>£{tankSaving.toFixed(2)}</strong>
-							{annualSaving && <>, and based on your mileage you could save <strong>~£{Math.round(annualSaving)}/yr</strong></>}
-						  </>
-						})()}
-					  </div>
-			  <ShareFuel
-				carMake={data.car_make}
-				stationName={data.stations?.[0]?.display_name}
-				price={data.stations?.[0]?.price}
-				fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
-				postcode={data.postcode}
-			  />
-				</div>
-			  )}
+                    <div className={styles.savingsTip}>
+                      {(() => {
+                        const priceDiffP = data.stations[data.stations.length - 1].price - data.stations[0].price
+                        const tankSaving = (priceDiffP / 100) * 55
+                        const annualSaving = data.annual_miles && data.mpg
+                          ? (priceDiffP / 100) * ((data.annual_miles / data.mpg) * 4.546)
+                          : null
+                        return (
+                          <>
+                            💰 Choosing the cheapest over the priciest saves <strong>{priceDiffP.toFixed(1)}p/litre</strong>
+                            {' '}— a full tank saves <strong>£{tankSaving.toFixed(2)}</strong>
+                            {annualSaving && <>, and based on your mileage you could save <strong>~£{Math.round(annualSaving)}/yr</strong></>}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  <ShareFuel
+                    carMake={data.car_make}
+                    stationName={data.stations?.[0]?.display_name}
+                    price={data.stations?.[0]?.price}
+                    fuelLabel={data.fuel_type === 'B7_STANDARD' ? 'diesel' : 'petrol'}
+                    postcode={data.postcode}
+                  />
+                </div>
+              )}
 
               {data.stations && data.stations.length === 0 && (
                 <div className={styles.noStations}>
