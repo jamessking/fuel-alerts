@@ -14,8 +14,8 @@ const FUEL_NORMALISE = {
   'e10':             'E10',
   'e5':              'E5',
   'super unleaded':  'E5',
-  'diesel':          'B7',
-  'b7':              'B7',
+  'diesel':          'B7_STANDARD',
+  'b7':              'B7_STANDARD',
   'super diesel':    'SDV',
   'sdv':             'SDV',
   'both':            null, // handled separately
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   // Normalise fuel type — handle 'both' and legacy values
   const rawFuel = subscriber.fuel_type || 'E10'
   const fuelTypes = rawFuel.toLowerCase() === 'both'
-    ? ['E10', 'B7']
+    ? ['E10', 'B7_STANDARD']
     : [normaliseFuel(rawFuel)]
 
   let stations = []
