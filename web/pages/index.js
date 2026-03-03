@@ -16,17 +16,35 @@ export default function Home() {
   const [fuelType, setFuelType] = useState('')
   const [radius, setRadius] = useState('5')
   const [email, setEmail] = useState('')
-  const [annualMiles, setAnnualMiles] = useState('')
-  const [mpg, setMpg] = useState('')
-  const [tankLitres, setTankLitres] = useState('')
+  const [annualMiles, setAnnualMiles] = useState('10000')
+  const [mpg, setMpg] = useState('45')
+  const [tankLitres, setTankLitres] = useState('55')
 
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [stationCount, setStationCount] = useState(null)
+  const [stationCountLoading, setStationCountLoading] = useState(false)
   const [priceData, setPriceData] = useState(null)
   const [priceTab, setPriceTab] = useState('unleaded')
 
   const postcodeTimer = useRef(null)
+  const stationTimer = useRef(null)
+
+  // Fetch station count when postcode or radius changes
+  useEffect(() => {
+    if (!postcodeInfo) { setStationCount(null); return }
+    clearTimeout(stationTimer.current)
+    stationTimer.current = setTimeout(async () => {
+      setStationCountLoading(true)
+      try {
+        const res = await fetch(`/api/station-count?lat=${postcodeInfo.lat}&lon=${postcodeInfo.lon}&radius=${radius}`)
+        const data = await res.json()
+        setStationCount(data.count ?? null)
+      } catch { setStationCount(null) }
+      finally { setStationCountLoading(false) }
+    }, 300)
+  }, [postcodeInfo, radius])
 
   useEffect(() => {
     fetch('/api/fuel-averages')
@@ -89,6 +107,12 @@ export default function Home() {
         setRegInfo(data)
         if (data.fuelType) setFuelType(data.fuelType)
         if (data.mpg) setMpg(String(data.mpg))
+        // Auto-set tank size based on engine capacity if available
+        if (data.engineCapacity) {
+          const litres = data.engineCapacity / 1000
+          const tankGuess = litres < 1.4 ? 45 : litres < 2.0 ? 50 : 60
+          setTankLitres(String(tankGuess))
+        }
       }
     } catch {
       setRegError('Could not look up registration')
@@ -338,7 +362,14 @@ export default function Home() {
 
                 {/* Search Radius */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Search radius</label>
+                  <label className={styles.label}>
+                    Search radius
+                    {postcodeInfo && (
+                      <span className={styles.stationCount}>
+                        {stationCountLoading ? ' · checking...' : stationCount !== null ? ` · ${stationCount} station${stationCount !== 1 ? 's' : ''} nearby` : ''}
+                      </span>
+                    )}
+                  </label>
                   <div className={styles.radiusButtons}>
                     {['2', '5', '10', '20'].map(r => (
                       <button
@@ -353,88 +384,83 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Optional: Reg Lookup */}
-                <details className={styles.optionalSection}>
-                  <summary className={styles.optionalToggle}>
-                    🚗 Add your vehicle <span>(optional — unlocks savings estimates)</span>
-                  </summary>
-                  <div className={styles.optionalFields}>
-                    <div className={styles.regRow}>
-                      <div className={styles.inputWrapper} style={{flex: 1}}>
-                        <input
-                          className={styles.input}
-                          type="text"
-                          placeholder="e.g. AB12 CDE"
-                          value={reg}
-                          onChange={e => setReg(e.target.value.toUpperCase())}
-                          maxLength={8}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.regLookupBtn}
-                        onClick={lookupReg}
-                        disabled={regLoading || !reg}
-                      >
-                        {regLoading ? '...' : 'Look up'}
-                      </button>
+                {/* Vehicle Section */}
+                <div className={styles.vehicleSection}>
+                  <div className={styles.vehicleSectionHeader}>
+                    <span className={styles.vehicleSectionIcon}>🚗</span>
+                    <div>
+                      <div className={styles.vehicleSectionTitle}>Add your vehicle <span className={styles.vehicleSectionBadge}>Recommended</span></div>
+                      <div className={styles.vehicleSectionSub}>Auto-selects fuel type · unlocks savings estimates</div>
                     </div>
-                    {regError && <div className={styles.fieldError}>{regError}</div>}
-                    {regInfo && (
-                      <div className={styles.vehicleCard}>
-                        <div className={styles.vehicleCardHeader}>
-                          <span className={styles.vehicleCardCheck}>✓</span>
-                          <span className={styles.vehicleCardTitle}>{regInfo.make} · {regInfo.year} · {regInfo.colour}</span>
+                  </div>
+                  <div className={styles.regRow}>
+                    <div className={styles.regPlate}>
+                      <span className={styles.regPlateFlag}>🇬🇧</span>
+                      <input
+                        className={styles.regPlateInput}
+                        type="text"
+                        placeholder="AB12 CDE"
+                        value={reg}
+                        onChange={e => setReg(e.target.value.toUpperCase())}
+                        maxLength={8}
+                      />
+                    </div>
+                    <button type="button" className={styles.regLookupBtn} onClick={lookupReg} disabled={regLoading || !reg}>
+                      {regLoading ? '...' : 'Look up'}
+                    </button>
+                  </div>
+                  {regError && <div className={styles.fieldError}>{regError}</div>}
+                  {regInfo && (
+                    <div className={styles.vehicleCardNew}>
+                      <div className={styles.vehicleCardTop}>
+                        <div className={styles.vehicleCardMake}>{regInfo.make}</div>
+                        <div className={styles.vehicleCardBadges}>
+                          <span className={styles.vcBadge}>{regInfo.year}</span>
+                          <span className={styles.vcBadge}>{regInfo.colour}</span>
+                          <span className={styles.vcBadgeFuel}>{regInfo.fuelTypeRaw}</span>
+                          {regInfo.engineCapacity && <span className={styles.vcBadge}>{(regInfo.engineCapacity/1000).toFixed(1)}L</span>}
                         </div>
-                        <div className={styles.vehicleCardDetails}>
-                          <span>{regInfo.fuelTypeRaw}</span>
-                          {regInfo.engineCapacity && <span>{(regInfo.engineCapacity / 1000).toFixed(1)}L</span>}
-                          {regInfo.co2Emissions && <span>{regInfo.co2Emissions}g CO₂</span>}
-                          {regInfo.euroStatus && <span>{regInfo.euroStatus}</span>}
-                        </div>
+                      </div>
+                      <div className={styles.vehicleCardChecks}>
                         {regInfo.motExpired ? (
-                          <div className={styles.motWarning}>
-                            ⚠️ MOT EXPIRED — this vehicle may not be road legal
-                          </div>
+                          <div className={styles.vcCheckFail}>⚠ MOT EXPIRED</div>
                         ) : regInfo.motDaysRemaining !== null && regInfo.motDaysRemaining <= 30 ? (
-                          <div className={styles.motAlert}>
-                            🔴 MOT expires in {regInfo.motDaysRemaining} day{regInfo.motDaysRemaining === 1 ? '' : 's'} ({regInfo.motExpiryDate})
-                          </div>
+                          <div className={styles.vcCheckWarn}>🔴 MOT expires in {regInfo.motDaysRemaining} days</div>
                         ) : regInfo.motExpiryDate ? (
-                          <div className={styles.motOk}>
-                            ✓ MOT valid until {regInfo.motExpiryDate} ({regInfo.motDaysRemaining} days)
-                          </div>
+                          <div className={styles.vcCheckOk}>✓ MOT valid until {regInfo.motExpiryDate}</div>
                         ) : null}
                         {regInfo.taxStatus && (
-                          <div className={regInfo.taxStatus === 'Taxed' ? styles.taxOk : styles.taxWarning}>
-                            {regInfo.taxStatus === 'Taxed' ? '✓' : '⚠️'} Tax: {regInfo.taxStatus}{regInfo.taxDueDate ? ` (due ${regInfo.taxDueDate})` : ''}
+                          <div className={regInfo.taxStatus === 'Taxed' ? styles.vcCheckOk : styles.vcCheckWarn}>
+                            {regInfo.taxStatus === 'Taxed' ? `✓ Tax until ${regInfo.taxDueDate || '—'}` : `⚠ Tax: ${regInfo.taxStatus}`}
                           </div>
                         )}
                       </div>
-                    )}
-
-                    <div className={styles.vehicleFields}>
-                      <div className={styles.miniField}>
-                        <label className={styles.labelSmall}>Annual miles</label>
-                        <input className={styles.input} type="number" placeholder="e.g. 8000" value={annualMiles} onChange={e => setAnnualMiles(e.target.value)} />
-                      </div>
-                      <div className={styles.miniField}>
-                        <label className={styles.labelSmall}>MPG</label>
-                        <input className={styles.input} type="number" placeholder="e.g. 45" value={mpg} onChange={e => setMpg(e.target.value)} />
-                      </div>
-                      <div className={styles.miniField}>
-                        <label className={styles.labelSmall}>Tank (litres)</label>
-                        <input className={styles.input} type="number" placeholder="e.g. 55" value={tankLitres} onChange={e => setTankLitres(e.target.value)} />
+                    </div>
+                  )}
+                  <div className={styles.vehicleFields}>
+                    <div className={styles.miniField}>
+                      <label className={styles.labelSmall}>Annual miles</label>
+                      <div className={styles.stepperRow}>
+                        <button type="button" className={styles.stepperBtn} onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000))}>−</button>
+                        <input className={`${styles.input} ${styles.stepperInput}`} type="number" value={annualMiles} onChange={e => setAnnualMiles(e.target.value)} />
+                        <button type="button" className={styles.stepperBtn} onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
                       </div>
                     </div>
-
-                    {saving && (
-                      <div className={styles.savingPreview}>
-                        💰 If prices vary by 10p/litre near you, you could save <strong>~£{saving}/yr</strong> by always picking the cheapest station
-                      </div>
-                    )}
+                    <div className={styles.miniField}>
+                      <label className={styles.labelSmall}>MPG</label>
+                      <input className={styles.input} type="number" value={mpg} onChange={e => setMpg(e.target.value)} />
+                    </div>
+                    <div className={styles.miniField}>
+                      <label className={styles.labelSmall}>Tank (L)</label>
+                      <input className={styles.input} type="number" value={tankLitres} onChange={e => setTankLitres(e.target.value)} />
+                    </div>
                   </div>
-                </details>
+                  {saving && (
+                    <div className={styles.savingPreview}>
+                      💰 Choosing the cheapest station could save you <strong>~£{saving}/yr</strong>
+                    </div>
+                  )}
+                </div>
 
                 {/* Email */}
                 <div className={styles.fieldGroup}>

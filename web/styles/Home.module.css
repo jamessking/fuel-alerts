@@ -1058,3 +1058,162 @@ details[open] .optionalToggle::after {
     display: none;
   }
 }
+
+/* ── Vehicle Section ─────────────────────────────── */
+.vehicleSection {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid #1e2d4a;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.vehicleSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.vehicleSectionIcon { font-size: 20px; line-height: 1; margin-top: 2px; }
+
+.vehicleSectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0f4ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vehicleSectionBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #00e676;
+  background: rgba(0,230,118,0.12);
+  border: 1px solid rgba(0,230,118,0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vehicleSectionSub { font-size: 11px; color: #8899bb; margin-top: 2px; }
+
+/* UK-style number plate */
+.regPlate {
+  display: flex;
+  align-items: center;
+  background: #f5c518;
+  border-radius: 8px;
+  padding: 0 10px;
+  flex: 1;
+  gap: 8px;
+  border: 2px solid #d4a800;
+}
+
+.regPlateFlag { font-size: 16px; flex-shrink: 0; }
+
+.regPlateInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #0a0f1e;
+  width: 100%;
+  padding: 10px 0;
+  font-family: 'Arial Black', Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.regPlateInput::placeholder { color: rgba(10,15,30,0.35); letter-spacing: 0.08em; }
+
+/* Vehicle result card */
+.vehicleCardNew {
+  background: rgba(0,230,118,0.05);
+  border: 1px solid rgba(0,230,118,0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+
+.vehicleCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.vehicleCardMake {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f0f4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vehicleCardBadges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.vcBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8899bb;
+  background: rgba(136,153,187,0.1);
+  border: 1px solid rgba(136,153,187,0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.vcBadgeFuel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #00e676;
+  background: rgba(0,230,118,0.1);
+  border: 1px solid rgba(0,230,118,0.25);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.vehicleCardChecks { display: flex; gap: 10px; flex-wrap: wrap; }
+.vcCheckOk  { font-size: 11px; font-weight: 600; color: #00e676; }
+.vcCheckWarn { font-size: 11px; font-weight: 600; color: #ffb300; }
+.vcCheckFail { font-size: 11px; font-weight: 700; color: #ff6b4a; }
+
+/* Miles stepper */
+.stepperRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepperBtn {
+  width: 32px;
+  height: 38px;
+  background: rgba(136,153,187,0.1);
+  border: 1px solid #1e2d4a;
+  border-radius: 8px;
+  color: #f0f4ff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepperBtn:hover { background: rgba(136,153,187,0.2); }
+.stepperInput { text-align: center; flex: 1; min-width: 0; }
+
+/* Station count */
+.stationCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: #00e676;
+  margin-left: 8px;
+}
