@@ -80,8 +80,6 @@ export async function getTownData(cityName) {
   if (!stations || stations.length === 0) return null
 
   const nodeIds = stations.map(s => s.node_id)
-	console.log(`DEBUG ${cityName} stations:`, stations.length)
-	console.log(`DEBUG ${cityName} nodeIds:`, nodeIds.length)
 
   const [pricesRes, lastWeekRes, historyRes] = await Promise.all([
     supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')

@@ -270,6 +270,7 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
+	console.log("REGENERATING:", params.slug)
   const { slug } = params
   const cityName = fromSlug(slug)
 
@@ -302,6 +303,6 @@ export async function getStaticProps({ params }) {
 
   return {
     props: { data, slug },
-    revalidate: 6 * 60 * 60, // 6 hours
+    revalidate: 1, // TEMP: force regeneration
   }
 }
