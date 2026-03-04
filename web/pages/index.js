@@ -1,6 +1,8 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import styles from '../styles/Home.module.css'
+import StationCard from '../components/StationCard'
 
 export default function Home() {
   const [postcode, setPostcode] = useState('')
@@ -27,11 +29,12 @@ export default function Home() {
   const [stationCountLoading, setStationCountLoading] = useState(false)
   const [priceData, setPriceData] = useState(null)
   const [priceTab, setPriceTab] = useState('unleaded')
+  const [nearbyStations, setNearbyStations] = useState([])
+  const [nearbyLoading, setNearbyLoading] = useState(false)
 
   const postcodeTimer = useRef(null)
   const stationTimer = useRef(null)
 
-  // Fetch station count when postcode or radius changes
   useEffect(() => {
     if (!postcodeInfo) { setStationCount(null); return }
     clearTimeout(stationTimer.current)
@@ -53,7 +56,6 @@ export default function Home() {
       .catch(() => {})
   }, [])
 
-  // Postcode lookup with debounce
   useEffect(() => {
     const clean = postcode.replace(/\s/g, '').toUpperCase()
     if (clean.length < 5) {
@@ -87,7 +89,6 @@ export default function Home() {
     }, 500)
   }, [postcode])
 
-  // Reg lookup
   const lookupReg = async () => {
     const cleanReg = reg.replace(/\s/g, '').toUpperCase()
     if (!cleanReg) return
@@ -107,7 +108,6 @@ export default function Home() {
         setRegInfo(data)
         if (data.fuelType) setFuelType(data.fuelType)
         if (data.mpg) setMpg(String(data.mpg))
-        // Auto-set tank size based on engine capacity if available
         if (data.engineCapacity) {
           const litres = data.engineCapacity / 1000
           const tankGuess = litres < 1.4 ? 45 : litres < 2.0 ? 50 : 60
@@ -150,6 +150,17 @@ export default function Home() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Subscription failed')
       setSubmitted(true)
+
+      // Load nearby stations for the success state
+      setNearbyLoading(true)
+      try {
+        const fuel = fuelType === 'B7' || fuelType === 'SDV' ? 'B7_STANDARD' : 'E10'
+        const res2 = await fetch(`/api/nearby-stations?lat=${postcodeInfo.lat}&lon=${postcodeInfo.lon}&radius=${radius}&fuel=${fuel}`)
+        const d2 = await res2.json()
+        if (d2.stations) setNearbyStations(d2.stations)
+      } catch {}
+      finally { setNearbyLoading(false) }
+
     } catch (err) {
       setSubmitError(err.message)
     } finally {
@@ -166,6 +177,21 @@ export default function Home() {
 
   const saving = estimatedSaving()
 
+  const fmt = (v) => v ? `${v.toFixed(1)}p` : '—'
+  const fmtDelta = (v) => {
+    if (v === null || v === undefined) return null
+    return `${v > 0 ? '+' : ''}${v.toFixed(1)}p`
+  }
+
+  // Country slug map for price table links
+  const countryLinks = {
+    '🇬🇧 UK': null,
+    '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England': '/country/england',
+    '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland': '/country/scotland',
+    '🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales': '/country/wales',
+    '🇬🇧 N. Ireland': '/country/northern-ireland',
+  }
+
   return (
     <>
       <Head>
@@ -176,14 +202,11 @@ export default function Home() {
       </Head>
 
       <div className={styles.page}>
-        {/* Hero photo background */}
         <div className={styles.heroBg} style={{backgroundImage: 'url(https://images.unsplash.com/photo-1709536240401-58dff8e8d597?q=80&w=1548&auto=format&fit=crop)'}} />
         <div className={styles.heroBgOverlay} />
-        {/* Background orbs */}
         <div className={styles.orb1} />
         <div className={styles.orb2} />
 
-        {/* Nav */}
         <nav className={styles.nav}>
           <div className={styles.logo}>
             <span className={styles.logoMark}>⛽</span>
@@ -192,7 +215,6 @@ export default function Home() {
           <div className={styles.navBadge}>No app needed</div>
         </nav>
 
-        {/* Hero */}
         <section className={styles.hero}>
           <div className={styles.heroContent}>
             <div className={`${styles.pill} animate-fade-up delay-1`}>
@@ -223,18 +245,12 @@ export default function Home() {
                 {(() => {
                   const d = priceData[priceTab]
                   const rows = [
-                    { label: '🇬🇧 UK', data: d.uk },
-                    { label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England', data: d.england },
-                    { label: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland', data: d.scotland },
-                    { label: '🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales', data: d.wales },
-                    { label: '🇬🇧 N. Ireland', data: d.ni },
+                    { label: '🇬🇧 UK',           key: 'uk',      data: d.uk },
+                    { label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England',    key: 'england', data: d.england },
+                    { label: '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland',   key: 'scotland',data: d.scotland },
+                    { label: '🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales',      key: 'wales',   data: d.wales },
+                    { label: '🇬🇧 N. Ireland',   key: 'ni',      data: d.ni },
                   ]
-                  const fmt = (v) => v ? `${v.toFixed(1)}p` : '—'
-                  const fmtDelta = (v) => {
-                    if (v === null || v === undefined) return null
-                    const sign = v > 0 ? '+' : ''
-                    return `${sign}${v.toFixed(1)}p`
-                  }
                   return (
                     <div className={styles.priceTable}>
                       <div className={styles.priceTableHeader}>
@@ -248,21 +264,29 @@ export default function Home() {
                       {rows.map(row => {
                         const delta = row.data?.weekDelta
                         const deltaStr = fmtDelta(delta)
+                        const link = countryLinks[row.label]
+                        const regionCell = link
+                          ? <Link href={link} className={styles.priceTableRegionLink}>{row.label}</Link>
+                          : <span>{row.label}</span>
                         return (
-                        <div key={row.label} className={styles.priceTableRow}>
-                          <span className={styles.priceTableRegion}>{row.label}</span>
-                          <span className={styles.priceTableAvg}>{fmt(row.data?.avg)}</span>
-                          <span className={delta === null ? '' : delta > 0 ? styles.deltaUp : delta < 0 ? styles.deltaDown : styles.deltaNeutral}>
-                            {deltaStr || '—'}
-                          </span>
-                          <span>{fmt(row.data?.motorway)}</span>
-                          <span>{fmt(row.data?.supermarket)}</span>
-                          <span>{fmt(row.data?.forecourt)}</span>
-                        </div>
+                          <div key={row.key} className={styles.priceTableRow}>
+                            <span className={styles.priceTableRegion}>{regionCell}</span>
+                            <span className={styles.priceTableAvg}>{fmt(row.data?.avg)}</span>
+                            <span className={delta === null ? '' : delta > 0 ? styles.deltaUp : delta < 0 ? styles.deltaDown : styles.deltaNeutral}>
+                              {deltaStr || '—'}
+                            </span>
+                            <span>{fmt(row.data?.motorway)}</span>
+                            <span>{fmt(row.data?.supermarket)}</span>
+                            <span>{fmt(row.data?.forecourt)}</span>
+                          </div>
                         )
                       })}
                       <div className={styles.priceTableFooter}>
-                        Updated {priceData.updatedAt ? new Date(priceData.updatedAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : 'today'}
+                        Updated {priceData.updatedAt
+                          ? priceData.updatedAt.includes('T')
+                            ? new Date(priceData.updatedAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})
+                            : priceData.updatedAt
+                          : 'today'}
                       </div>
                     </div>
                   )
@@ -306,7 +330,30 @@ export default function Home() {
               <div className={styles.successState}>
                 <div className={styles.successIcon}>✓</div>
                 <h3>You're on the list!</h3>
-                <p>Check your inbox to confirm your email. Your first FuelAlert will arrive shortly after.</p>
+                <p>Check your inbox to confirm your email. Your first FuelAlert arrives Monday.</p>
+
+                {/* Nearby stations */}
+                {nearbyLoading && (
+                  <p style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>Finding cheapest nearby stations…</p>
+                )}
+                {!nearbyLoading && nearbyStations.length > 0 && (
+                  <div style={{width: '100%', marginTop: '0.5rem'}}>
+                    <p style={{fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem'}}>
+                      Cheapest near {postcodeInfo?.formatted}
+                    </p>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                      {nearbyStations.slice(0, 5).map((s, i) => (
+                        <StationCard
+                          key={s.node_id}
+                          station={s}
+                          rank={i + 1}
+                          showFuelBadge={true}
+                          compact={true}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className={styles.form}>
@@ -360,7 +407,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Search Radius */}
+                {/* Radius */}
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>
                     Search radius
@@ -384,7 +431,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Vehicle Section */}
+                {/* Vehicle */}
                 <div className={styles.vehicleSection}>
                   <div className={styles.vehicleSectionHeader}>
                     <span className={styles.vehicleSectionIcon}>🚗</span>
@@ -441,12 +488,12 @@ export default function Home() {
                     <div className={styles.miniField}>
                       <label className={styles.labelSmall}>Annual miles</label>
                       <div className={styles.stepperRow}>
-						  <button type="button" className={styles.stepperBtn} 
-							onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000)))}>−</button>
-						  <span className={styles.stepperValue}>{Number(annualMiles).toLocaleString()}</span>
-						  <button type="button" className={styles.stepperBtn} 
-							onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
-						</div>
+                        <button type="button" className={styles.stepperBtn}
+                          onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000)))}>−</button>
+                        <span className={styles.stepperValue}>{Number(annualMiles).toLocaleString()}</span>
+                        <button type="button" className={styles.stepperBtn}
+                          onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
+                      </div>
                     </div>
                     <div className={styles.miniField}>
                       <label className={styles.labelSmall}>MPG</label>
@@ -479,11 +526,7 @@ export default function Home() {
 
                 {submitError && <div className={styles.submitError}>{submitError}</div>}
 
-                <button
-                  type="submit"
-                  className={styles.submitBtn}
-                  disabled={submitting}
-                >
+                <button type="submit" className={styles.submitBtn} disabled={submitting}>
                   {submitting ? 'Signing up...' : 'Get my FuelAlerts →'}
                 </button>
 
@@ -506,7 +549,7 @@ export default function Home() {
             </div>
             <div className={styles.steps}>
               {[
-                { n: '01', title: 'Enter your postcode', desc: 'Tell us where you are and how far you\'re willing to travel for fuel.' },
+                { n: '01', title: 'Enter your postcode', desc: "Tell us where you are and how far you're willing to travel for fuel." },
                 { n: '02', title: 'We watch the prices', desc: 'Our system pulls live data from 7,150+ stations daily, direct from government sources.' },
                 { n: '03', title: 'You get an alert', desc: 'Weekly digest lands in your inbox showing the top 5 cheapest nearby stations — with exact prices.' },
               ].map(step => (
@@ -550,7 +593,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Data trust */}
+        {/* Trust */}
         <section className={styles.trust}>
           <div className={styles.sectionInner}>
             <div className={styles.trustGrid}>
@@ -591,7 +634,7 @@ export default function Home() {
               <span>⛽</span> FuelAlerts
             </div>
             <p className={styles.footerText}>
-              Fuel price data sourced from the UK Government Fuel Finder API. 
+              Fuel price data sourced from the UK Government Fuel Finder API.
               FuelAlerts is not affiliated with any fuel retailer.
             </p>
             <div className={styles.footerLinks}>

@@ -1,152 +1,296 @@
+/* ── StationCard.module.css ─────────────────────────────────────────────── */
+/* Matches the dark navy design system from Home_module.css                  */
+/* Used on: town pages, region pages, front page top-5, email preview        */
+
 .card {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  transition: background 0.2s;
-}
-
-.card:last-child {
-  border-bottom: none;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid #1e2d4a;
+  border-radius: 14px;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
 }
 
 .card:hover {
-  background: rgba(255,255,255,0.02);
+  border-color: rgba(0, 230, 118, 0.2);
+  background: rgba(17, 24, 39, 0.85);
 }
 
-.cardBest {
-  background: rgba(0, 230, 118, 0.05);
-  border-left: 3px solid var(--green);
+/* Gold left border for rank 1 */
+.cardTop {
+  border-color: rgba(0, 230, 118, 0.35);
+  background: rgba(0, 230, 118, 0.04);
 }
 
+.cardTop:hover {
+  border-color: rgba(0, 230, 118, 0.5);
+}
+
+/* Compact variant — tighter, for front page */
+.cardCompact {
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+/* ── Left column: rank + logo ──────────────────────────── */
 .left {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px;
   flex-shrink: 0;
-  width: 52px;
 }
 
 .rank {
-  font-size: 0.85rem;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #4a5a7a;
+  min-height: 16px;
   text-align: center;
-  min-width: 24px;
 }
 
-.logo {
-  width: 44px;
-  height: 28px;
+/* White rounded-square logo pill */
+.logoPill {
+  width: 48px;
+  height: 48px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cardCompact .logoPill {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+/* Logo takes up ~80% of the pill */
+.logoImg {
+  width: 80%;
+  height: 80%;
   object-fit: contain;
-  object-position: center;
-  filter: brightness(0.95);
 }
 
-.info {
+.logoFallback {
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e2d4a;
+  font-family: 'Syne', sans-serif;
+}
+
+.cardCompact .logoFallback {
+  font-size: 15px;
+}
+
+/* ── Centre column ─────────────────────────────────────── */
+.centre {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  color: #f0f4ff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.25rem;
 }
 
+.cardCompact .name {
+  font-size: 13px;
+}
+
+/* Address row */
 .meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   flex-wrap: wrap;
+  gap: 6px;
 }
 
-.meta span {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.address {
+  font-size: 11px;
+  color: #8899bb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
-.dist {
-  color: var(--text-secondary) !important;
-  font-weight: 500;
+.postcode {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a6a8a;
+  background: rgba(74, 106, 138, 0.12);
+  border: 1px solid rgba(74, 106, 138, 0.2);
+  border-radius: 5px;
+  padding: 1px 6px;
+  white-space: nowrap;
 }
 
-.fuelBadge {
-  background: var(--navy-light);
-  border: 1px solid var(--navy-border);
-  border-radius: 4px;
-  padding: 0.1rem 0.4rem;
-  font-size: 0.68rem !important;
-  color: var(--text-muted) !important;
+/* Directions button */
+.directionsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.08);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: 5px;
+  padding: 2px 7px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
 }
 
+.directionsBtn:hover {
+  background: rgba(0, 230, 118, 0.15);
+  border-color: rgba(0, 230, 118, 0.4);
+}
+
+/* ── Badges row ────────────────────────────────────────── */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Shared badge base */
+.badgePetrol,
+.badgeDiesel,
+.badgeSupermarket,
+.badgeMotorway {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.badgePetrol {
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.badgeDiesel {
+  color: #64b4ff;
+  background: rgba(100, 180, 255, 0.1);
+  border: 1px solid rgba(100, 180, 255, 0.25);
+}
+
+.badgeSupermarket {
+  color: #ffb300;
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.25);
+}
+
+.badgeMotorway {
+  color: #8899bb;
+  background: rgba(136, 153, 187, 0.1);
+  border: 1px solid rgba(136, 153, 187, 0.2);
+}
+
+/* ── Amenities ─────────────────────────────────────────── */
 .amenities {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
   flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
 }
 
 .amenity {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: var(--navy-light);
-  border: 1px solid var(--navy-border);
-  border-radius: 4px;
-  cursor: default;
+  gap: 3px;
+  font-size: 10px;
+  color: #6a7a9a;
+  background: rgba(30, 45, 74, 0.5);
+  border: 1px solid rgba(30, 45, 74, 0.8);
+  border-radius: 5px;
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 .amenityIcon {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-  filter: invert(1) opacity(0.6);
+  font-size: 10px;
+  line-height: 1;
 }
 
-/* Price column */
-.priceCol {
+.amenityLabel {
+  font-size: 10px;
+}
+
+/* ── Right column: price ───────────────────────────────── */
+.right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.2rem;
   flex-shrink: 0;
+  gap: 3px;
 }
 
 .price {
-  font-family: 'Syne', sans-serif;
+  font-size: 20px;
   font-weight: 800;
-  font-size: 1.15rem;
-  color: var(--text-primary);
+  color: #f0f4ff;
+  font-family: 'Syne', sans-serif;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
-.priceBest {
-  color: var(--green);
+.priceTop {
+  color: #00e676;
 }
 
-.cheapestBadge {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--green);
-  background: rgba(0, 230, 118, 0.1);
-  border-radius: 4px;
-  padding: 0.15rem 0.4rem;
+.cardCompact .price {
+  font-size: 18px;
 }
 
-.priceDiff {
-  font-size: 0.72rem;
-  color: var(--coral);
-  font-weight: 500;
+.priceUp {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ff6b4a;
+}
+
+.priceDown {
+  font-size: 11px;
+  font-weight: 600;
+  color: #00e676;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 500px) {
+  .address {
+    max-width: 130px;
+  }
+
+  .logoPill {
+    width: 40px;
+    height: 40px;
+  }
+
+  .price {
+    font-size: 17px;
+  }
 }

@@ -72,7 +72,7 @@ export async function getTownData(cityName) {
 
   const { data: stations } = await supabase
     .from('pfs_stations')
-    .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, is_motorway_service_station, is_supermarket_service_station, latitude, longitude')
+    .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, address, address2, is_motorway_service_station, is_supermarket_service_station, latitude, longitude, amenities')
     .ilike('city', cityName)
     .neq('permanent_closure', true)
     .neq('is_motorway_service_station', true)

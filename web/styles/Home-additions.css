@@ -1,0 +1,15 @@
+/* Add these to the bottom of Home.module.css */
+
+/* Clickable country links in price table */
+.priceTableRegionLink {
+  color: #f0f4ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 12px;
+  transition: color 0.15s;
+}
+
+.priceTableRegionLink:hover {
+  color: #00e676;
+  text-decoration: underline;
+}

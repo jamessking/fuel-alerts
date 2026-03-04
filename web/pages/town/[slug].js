@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 import { getAllTowns, getTownData, toSlug, fromSlug } from '../../lib/fuel'
 import ShareFuel from '../../components/ShareFuel'
+import StationCard from '../../components/StationCard'
 import styles from '../../styles/TownPage.module.css'
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
@@ -104,7 +105,7 @@ export default function TownPage({ data, slug }) {
             )}
           </section>
 
-          {/* Story: savings gap */}
+          {/* Savings story */}
           {saving && (
             <section className={styles.storyCard}>
               <h2>💰 How much can you save in {data.city}?</h2>
@@ -131,27 +132,17 @@ export default function TownPage({ data, slug }) {
             </section>
           )}
 
-          {/* Top 5 table */}
+          {/* Top 5 station cards */}
           <section className={styles.top5Section}>
             <h2>Top 5 cheapest stations in {data.city}</h2>
             <div className={styles.stationList}>
               {data.top5.map((s, i) => (
-                <div key={s.node_id} className={`${styles.stationRow} ${i === 0 ? styles.stationRowBest : ''}`}>
-                  <div className={styles.stationRank}>{i === 0 ? '🏆' : `#${i + 1}`}</div>
-                  {s.logo_url && (
-                    <img src={s.logo_url} alt="" className={styles.stationLogo}
-                      onError={e => e.target.style.display = 'none'} />
-                  )}
-                  <div className={styles.stationInfo}>
-                    <div className={styles.stationName}>{s.display_name}</div>
-                    <div className={styles.stationMeta}>
-                      {s.postcode && <span>{s.postcode}</span>}
-                      <span className={styles.fuelBadge}>{s.fuel_type === 'E10' ? 'Petrol' : 'Diesel'}</span>
-                      {s.is_supermarket_service_station && <span className={styles.superBadge}>Supermarket</span>}
-                    </div>
-                  </div>
-                  <div className={styles.stationPrice}>{fmt(s.price)}</div>
-                </div>
+                <StationCard
+                  key={s.node_id}
+                  station={s}
+                  rank={i + 1}
+                  showFuelBadge={true}
+                />
               ))}
             </div>
           </section>
@@ -166,7 +157,7 @@ export default function TownPage({ data, slug }) {
             />
           </section>
 
-          {/* Sign up CTA */}
+          {/* CTA */}
           <section className={styles.ctaSection}>
             <div className={styles.ctaCard}>
               <h2>Get the cheapest {data.city} fuel prices in your inbox every Monday</h2>
@@ -203,7 +194,7 @@ export default function TownPage({ data, slug }) {
   )
 }
 
-// Simple SVG price chart — no external lib needed
+// Simple SVG price chart
 function PriceChart({ series }) {
   const w = 600, h = 140, pad = { top: 10, right: 10, bottom: 30, left: 36 }
   const iw = w - pad.left - pad.right
@@ -222,29 +213,24 @@ function PriceChart({ series }) {
     return 'M ' + pts.join(' L ')
   }
 
-  // X axis labels — show ~5 evenly spaced dates
   const labelIdxs = [0, Math.floor(series.length / 4), Math.floor(series.length / 2), Math.floor(series.length * 3 / 4), series.length - 1]
     .filter((v, i, a) => a.indexOf(v) === i)
 
   return (
     <div className={styles.chartWrap}>
       <svg viewBox={`0 0 ${w} ${h}`} className={styles.chart}>
-        {/* Y axis ticks */}
         {[minV, Math.round((minV + maxV) / 2), maxV].map(v => (
           <g key={v}>
             <line x1={pad.left} x2={w - pad.right} y1={yScale(v)} y2={yScale(v)} stroke="#1e2d4a" strokeWidth="1" />
             <text x={pad.left - 4} y={yScale(v) + 4} textAnchor="end" fontSize="9" fill="#4a5a7a">{v}p</text>
           </g>
         ))}
-        {/* X axis date labels */}
         {labelIdxs.map(i => (
           <text key={i} x={xScale(i)} y={h - 4} textAnchor="middle" fontSize="9" fill="#4a5a7a">
             {series[i].date.slice(5)}
           </text>
         ))}
-        {/* Petrol line */}
         {pathFor('petrol') && <path d={pathFor('petrol')} fill="none" stroke="#00e676" strokeWidth="2" strokeLinejoin="round" />}
-        {/* Diesel line */}
         {pathFor('diesel') && <path d={pathFor('diesel')} fill="none" stroke="#64b4ff" strokeWidth="2" strokeLinejoin="round" />}
       </svg>
       <div className={styles.chartLegend}>
@@ -267,10 +253,8 @@ export async function getStaticProps({ params }) {
   const { slug } = params
   const cityName = fromSlug(slug)
 
-  // Try exact match first, then fuzzy
   let data = await getTownData(cityName)
 
-  // If no data, try finding actual city name from DB
   if (!data) {
     const towns = await getAllTowns()
     const match = towns.find(t => t.slug === slug)
@@ -281,6 +265,6 @@ export async function getStaticProps({ params }) {
 
   return {
     props: { data, slug },
-    revalidate: 6 * 60 * 60, // 6 hours
+    revalidate: 6 * 60 * 60,
   }
 }
