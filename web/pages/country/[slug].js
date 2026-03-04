@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
-import { toSlug, fromSlug } from '../../lib/fuel'
+import { toSlug, getLatestSnapshotDate } from '../../lib/fuel'
 import styles from '../../styles/TownPage.module.css'
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
@@ -85,7 +85,7 @@ export async function getStaticProps({ params }) {
   const country = COUNTRIES.find(c => toSlug(c) === slug)
   if (!country) return { notFound: true }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = await getLatestSnapshotDate()
 
   const { data: stations } = await supabase
     .from('pfs_stations')
@@ -108,7 +108,6 @@ export async function getStaticProps({ params }) {
   const petrolPrices = (prices || []).filter(p => p.fuel_type === 'E10').map(p => parseFloat(p.price))
   const dieselPrices = (prices || []).filter(p => p.fuel_type === 'B7_STANDARD').map(p => parseFloat(p.price))
 
-  // Group by county
   const stationMap = {}
   for (const s of stations) stationMap[s.node_id] = s
   const countyData = {}
@@ -136,9 +135,7 @@ export async function getStaticProps({ params }) {
 
   return {
     props: {
-      country,
-      slug,
-      regions,
+      country, slug, regions,
       stationCount: stations.length,
       avgPetrol: avg(petrolPrices) ? Math.round(avg(petrolPrices) * 10) / 10 : null,
       avgDiesel: avg(dieselPrices) ? Math.round(avg(dieselPrices) * 10) / 10 : null,

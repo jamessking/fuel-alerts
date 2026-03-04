@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { getAllRegions, getAllTowns, toSlug, fromSlug } from '../../lib/fuel'
+import { getAllRegions, toSlug, getLatestSnapshotDate } from '../../lib/fuel'
 import { supabase } from '../../lib/supabase'
 import styles from '../../styles/TownPage.module.css'
 
@@ -88,8 +88,8 @@ export async function getStaticProps({ params }) {
   if (!match) return { notFound: true }
 
   const regionName = match.region
+  const today = await getLatestSnapshotDate()
 
-  // Get towns in this region
   const { data: stations } = await supabase
     .from('pfs_stations')
     .select('node_id, city, country')
@@ -105,7 +105,6 @@ export async function getStaticProps({ params }) {
     if (c) cityCounts[c] = (cityCounts[c] || 0) + 1
   }
 
-  const today = new Date().toISOString().split('T')[0]
   const nodeIds = stations.map(s => s.node_id)
 
   const { data: prices } = await supabase
@@ -119,7 +118,6 @@ export async function getStaticProps({ params }) {
   const petrolPrices = (prices || []).filter(p => p.fuel_type === 'E10').map(p => parseFloat(p.price))
   const dieselPrices = (prices || []).filter(p => p.fuel_type === 'B7_STANDARD').map(p => parseFloat(p.price))
 
-  // Get cheapest petrol per city
   const stationMap = {}
   for (const s of stations) stationMap[s.node_id] = s
   const cityPrices = {}
@@ -142,10 +140,7 @@ export async function getStaticProps({ params }) {
 
   return {
     props: {
-      region: regionName,
-      slug,
-      country,
-      towns,
+      region: regionName, slug, country, towns,
       stationCount: stations.length,
       avgPetrol: avg(petrolPrices) ? Math.round(avg(petrolPrices) * 10) / 10 : null,
       avgDiesel: avg(dieselPrices) ? Math.round(avg(dieselPrices) * 10) / 10 : null,
