@@ -11,13 +11,34 @@ export function fromSlug(slug) {
   return (slug || '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
+// Returns the most recent snapshot date in the DB — never hardcodes today.
+// Falls back gracefully if ingest failed — always returns last good data.
+let _snapshotDateCache = null
+let _snapshotDateExpiry = 0
+
+export async function getLatestSnapshotDate() {
+  const now = Date.now()
+  if (_snapshotDateCache && now < _snapshotDateExpiry) return _snapshotDateCache
+
+  const { data } = await supabase
+    .from('fuel_prices_daily')
+    .select('snapshot_date')
+    .order('snapshot_date', { ascending: false })
+    .limit(1)
+    .single()
+
+  const date = data?.snapshot_date || new Date().toISOString().split('T')[0]
+  _snapshotDateCache = date
+  _snapshotDateExpiry = now + 5 * 60 * 1000
+  return date
+}
+
 // Fast: single SQL aggregate — no full table scan
 export async function getAllTowns() {
   const { data, error } = await supabase
     .rpc('get_towns_with_counts')
 
   if (error || !data) {
-    // Fallback: just return empty — fallback:'blocking' handles the rest
     console.error('getAllTowns error:', error)
     return []
   }
@@ -45,9 +66,9 @@ export async function getAllRegions() {
 
 // Core data fetch for a town page
 export async function getTownData(cityName) {
-  const today = new Date().toISOString().split('T')[0]
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-  const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+  const today = await getLatestSnapshotDate()
+  const weekAgo = new Date(new Date(today).getTime() - 7 * 86400000).toISOString().split('T')[0]
+  const thirtyAgo = new Date(new Date(today).getTime() - 30 * 86400000).toISOString().split('T')[0]
 
   const { data: stations } = await supabase
     .from('pfs_stations')

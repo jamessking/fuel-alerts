@@ -10,6 +10,16 @@ let cache = null
 let cacheTime = null
 const CACHE_TTL_MS = 60 * 60 * 1000
 
+async function getLatestSnapshotDate() {
+  const { data } = await supabase
+    .from('fuel_prices_daily')
+    .select('snapshot_date')
+    .order('snapshot_date', { ascending: false })
+    .limit(1)
+    .single()
+  return data?.snapshot_date || new Date().toISOString().split('T')[0]
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
@@ -18,11 +28,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const today = new Date()
-    const weekAgo = new Date(today)
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const todayStr = today.toISOString().split('T')[0]
-    const weekAgoStr = weekAgo.toISOString().split('T')[0]
+    const todayStr = await getLatestSnapshotDate()
+    const weekAgoStr = new Date(new Date(todayStr).getTime() - 7 * 86400000).toISOString().split('T')[0]
 
     const [pricesRes, weekAgoRes, stationsRes] = await Promise.all([
       supabase
@@ -84,18 +91,18 @@ export default async function handler(req, res) {
       }
 
       return {
-        uk:      summary(rows, lastRows),
-        england: summary(byCountry(rows, 'england'), byCountry(lastRows, 'england')),
-        scotland: summary(byCountry(rows, 'scotland'), byCountry(lastRows, 'scotland')),
-        wales:   summary(byCountry(rows, 'wales'), byCountry(lastRows, 'wales')),
-        ni:      summary(byCountry(rows, 'northern ireland'), byCountry(lastRows, 'northern ireland')),
+        uk:       summary(rows, lastRows),
+        england:  summary(byCountry(rows, 'england'),          byCountry(lastRows, 'england')),
+        scotland: summary(byCountry(rows, 'scotland'),         byCountry(lastRows, 'scotland')),
+        wales:    summary(byCountry(rows, 'wales'),            byCountry(lastRows, 'wales')),
+        ni:       summary(byCountry(rows, 'northern ireland'), byCountry(lastRows, 'northern ireland')),
       }
     }
 
     cache = {
       unleaded: build('E10'),
       diesel: build('B7'),
-      updatedAt: new Date().toISOString(),
+      updatedAt: todayStr,
     }
     cacheTime = Date.now()
 
