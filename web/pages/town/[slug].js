@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { getAllTowns, getTownData, toSlug, fromSlug } from '../../lib/fuel'
 import ShareFuel from '../../components/ShareFuel'
 import styles from '../../styles/TownPage.module.css'
-console.log(data)
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
 const fmtDelta = d => d == null ? null : (d > 0 ? `+${d.toFixed(1)}p` : `${d.toFixed(1)}p`)
