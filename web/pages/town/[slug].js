@@ -297,7 +297,7 @@ export async function getStaticProps({ params }) {
       },
       slug,
     },
-    revalidate: 6 * 60 * 60,
+    revalidate: 1,
   }
 }
 
