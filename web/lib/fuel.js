@@ -11,64 +11,36 @@ export function fromSlug(slug) {
   return (slug || '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-// Get all towns with station counts — used for getStaticPaths
+// Fast: single SQL aggregate — no full table scan
 export async function getAllTowns() {
   const { data, error } = await supabase
-    .from('pfs_stations')
-    .select('city, country')
-    .eq('permanent_closure', false)
-    .neq('city', null)
-    .neq('city', '')
+    .rpc('get_towns_with_counts')
 
-  if (error || !data) return []
-
-  // Count stations per city
-  const counts = {}
-  const cityCountry = {}
-  for (const row of data) {
-    const city = (row.city || '').trim()
-    if (!city) continue
-    counts[city] = (counts[city] || 0) + 1
-    cityCountry[city] = row.country
+  if (error || !data) {
+    // Fallback: just return empty — fallback:'blocking' handles the rest
+    console.error('getAllTowns error:', error)
+    return []
   }
 
-  return Object.entries(counts)
-    .filter(([city]) => city.length > 1)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 500)
-    .map(([city, count]) => ({
-      city,
-      slug: toSlug(city),
-      count,
-      country: cityCountry[city],
-    }))
+  return data.map(r => ({
+    city: r.city,
+    slug: toSlug(r.city),
+    count: r.station_count,
+    country: r.country,
+  }))
 }
 
-// Get all regions (counties)
 export async function getAllRegions() {
   const { data, error } = await supabase
-    .from('pfs_stations')
-    .select('county')
-    .neq('county', null)
-    .neq('county', '')
+    .rpc('get_regions_with_counts')
 
   if (error || !data) return []
 
-  const counts = {}
-  for (const row of data) {
-    const county = (row.county || '').trim()
-    if (!county) continue
-    counts[county] = (counts[county] || 0) + 1
-  }
-
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 200)
-    .map(([county, count]) => ({
-      region: county,
-      slug: toSlug(county),
-      count,
-    }))
+  return data.map(r => ({
+    region: r.county,
+    slug: toSlug(r.county),
+    count: r.station_count,
+  }))
 }
 
 // Core data fetch for a town page
@@ -77,7 +49,6 @@ export async function getTownData(cityName) {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
   const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-  // Get stations in this city (non-motorway)
   const { data: stations } = await supabase
     .from('pfs_stations')
     .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, is_motorway_service_station, is_supermarket_service_station, latitude, longitude')
@@ -89,39 +60,25 @@ export async function getTownData(cityName) {
 
   const nodeIds = stations.map(s => s.node_id)
 
-  // Get today's prices for these stations
-  const { data: prices } = await supabase
-    .from('fuel_prices_daily')
-    .select('node_id, fuel_type, price, snapshot_date')
-    .in('node_id', nodeIds)
-    .eq('snapshot_date', today)
-    .in('fuel_type', ['E10', 'B7_STANDARD'])
+  const [pricesRes, lastWeekRes, historyRes] = await Promise.all([
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
+      .in('node_id', nodeIds).eq('snapshot_date', today).in('fuel_type', ['E10', 'B7_STANDARD']),
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
+      .in('node_id', nodeIds).eq('snapshot_date', weekAgo).in('fuel_type', ['E10', 'B7_STANDARD']),
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price, snapshot_date')
+      .in('node_id', nodeIds).gte('snapshot_date', thirtyAgo).lte('snapshot_date', today)
+      .in('fuel_type', ['E10', 'B7_STANDARD']).order('snapshot_date', { ascending: true }),
+  ])
 
-  // Get last week prices for delta
-  const { data: lastWeekPrices } = await supabase
-    .from('fuel_prices_daily')
-    .select('node_id, fuel_type, price')
-    .in('node_id', nodeIds)
-    .eq('snapshot_date', weekAgo)
-    .in('fuel_type', ['E10', 'B7_STANDARD'])
+  const prices = pricesRes.data || []
+  const lastWeekPrices = lastWeekRes.data || []
+  const history = historyRes.data || []
 
-  // Get price history for chart (last 30 days)
-  const { data: history } = await supabase
-    .from('fuel_prices_daily')
-    .select('node_id, fuel_type, price, snapshot_date')
-    .in('node_id', nodeIds)
-    .gte('snapshot_date', thirtyAgo)
-    .lte('snapshot_date', today)
-    .in('fuel_type', ['E10', 'B7_STANDARD'])
-    .order('snapshot_date', { ascending: true })
+  if (prices.length === 0) return null
 
-  if (!prices || prices.length === 0) return null
-
-  // Build station map
   const stationMap = {}
   for (const s of stations) stationMap[s.node_id] = s
 
-  // Enrich prices with station info
   const enriched = prices.map(p => ({
     ...p,
     ...stationMap[p.node_id],
@@ -129,14 +86,8 @@ export async function getTownData(cityName) {
     display_name: stationMap[p.node_id]?.brand_clean || stationMap[p.node_id]?.brand_name || stationMap[p.node_id]?.trading_name || 'Station',
   })).filter(p => p.price > 0)
 
-  // Build last week map for delta
-  const lastWeekMap = {}
-  for (const p of (lastWeekPrices || [])) {
-    lastWeekMap[`${p.node_id}_${p.fuel_type}`] = parseFloat(p.price)
-  }
-
   const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
-  const toP = (arr, fuel) => arr.filter(p => p.fuel_type === fuel).map(p => p.price)
+  const toP = (arr, fuel) => arr.filter(p => p.fuel_type === fuel).map(p => parseFloat(p.price))
 
   const petrol = enriched.filter(p => p.fuel_type === 'E10').sort((a, b) => a.price - b.price)
   const diesel = enriched.filter(p => p.fuel_type === 'B7_STANDARD').sort((a, b) => a.price - b.price)
@@ -144,16 +95,14 @@ export async function getTownData(cityName) {
 
   const avgPetrol = avg(toP(enriched, 'E10'))
   const avgDiesel = avg(toP(enriched, 'B7_STANDARD'))
-  const lastWeekAvgPetrol = avg((lastWeekPrices || []).filter(p => p.fuel_type === 'E10').map(p => parseFloat(p.price)))
-  const lastWeekAvgDiesel = avg((lastWeekPrices || []).filter(p => p.fuel_type === 'B7_STANDARD').map(p => parseFloat(p.price)))
+  const lastWeekAvgPetrol = avg(toP(lastWeekPrices, 'E10'))
+  const lastWeekAvgDiesel = avg(toP(lastWeekPrices, 'B7_STANDARD'))
 
-  // Supermarket vs independent
   const supermarketPetrol = petrol.filter(p => p.is_supermarket_service_station)
   const independentPetrol = petrol.filter(p => !p.is_supermarket_service_station)
 
-  // Price chart data — daily average per fuel type
   const chartData = {}
-  for (const row of (history || [])) {
+  for (const row of history) {
     const d = row.snapshot_date
     if (!chartData[d]) chartData[d] = { date: d, petrol: [], diesel: [] }
     if (row.fuel_type === 'E10') chartData[d].petrol.push(parseFloat(row.price))

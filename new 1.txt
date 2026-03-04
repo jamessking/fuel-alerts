@@ -1,0 +1,5 @@
+cd C:\Users\james\fuel-alerts
+pip install requests supabase
+$env:SUPABASE_URL="https://qwmdhhdxsxyfwyvvbzgg.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="sb_secret_w0QJAE2JiGTIlfBapXpctg_LseXRFln"
+python enrich_postcodes.py
