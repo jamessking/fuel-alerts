@@ -79,23 +79,38 @@ export async function getTownData(cityName) {
 
   if (!stations || stations.length === 0) return null
 
-  const nodeIds = stations.map(s => s.node_id)
-
-  const [pricesRes, lastWeekRes, historyRes] = await Promise.all([
-    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
-      .in('node_id', nodeIds).eq('snapshot_date', today).in('fuel_type', ['E10', 'B7_STANDARD']),
-    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
-      .in('node_id', nodeIds).eq('snapshot_date', weekAgo).in('fuel_type', ['E10', 'B7_STANDARD']),
-    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price, snapshot_date')
-      .in('node_id', nodeIds).gte('snapshot_date', thirtyAgo).lte('snapshot_date', today)
-      .in('fuel_type', ['E10', 'B7_STANDARD']).order('snapshot_date', { ascending: true }),
-  ])
+const { data: pricesData } = await supabase
+  .from('fuel_prices_daily')
+  .select(`
+    node_id,
+    fuel_type,
+    price,
+    snapshot_date,
+    pfs_stations!inner(
+      node_id,
+      trading_name,
+      brand_name,
+      brand_clean,
+      logo_url,
+      city,
+      county,
+      country,
+      postcode,
+      is_motorway_service_station,
+      is_supermarket_service_station
+    )
+  `)
+  .eq('snapshot_date', today)
+  .ilike('pfs_stations.city', cityName)
+  .neq('pfs_stations.permanent_closure', true)
+  .neq('pfs_stations.is_motorway_service_station', true)
+  .in('fuel_type', ['E10', 'B7_STANDARD'])
 
   const prices = pricesRes.data || []
   const lastWeekPrices = lastWeekRes.data || []
   const history = historyRes.data || []
 
-  if (prices.length === 0) return null
+  //if (prices.length === 0) return null - removed for testing
 
   const stationMap = {}
   for (const s of stations) stationMap[s.node_id] = s

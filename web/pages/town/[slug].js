@@ -303,6 +303,6 @@ export async function getStaticProps({ params }) {
 
   return {
     props: { data, slug },
-    revalidate: 1, // TEMP: force regeneration
+    revalidate: 6 * 60 * 60,
   }
 }
