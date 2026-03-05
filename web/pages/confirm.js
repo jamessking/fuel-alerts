@@ -99,7 +99,7 @@ export default function Confirm() {
               {data.stations && data.stations.length > 0 && (
                 <div className={styles.pricesSection}>
                   <div className={styles.pricesHeader}>
-                    <span className={styles.pricesLabel}>⚡ Live prices near you right now</span>
+                    <span className={styles.pricesLabel}>⚡ Cheapest fuel near you right now</span>
                     <span className={styles.pricesDate}>Updated today</span>
                   </div>
 
@@ -155,7 +155,9 @@ export default function Confirm() {
                       })()}
                     </div>
                   )}
-
+					<div style={{marginTop:'16px', fontWeight:500}}>
+					  Share this price with a friend 👇
+					</div>				
                   <ShareFuel
                     carMake={data.car_make}
                     stationName={data.stations?.[0]?.display_name}
