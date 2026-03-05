@@ -924,23 +924,6 @@ def build_email_html(
               </a>
             </td>
           </tr>
-            from urllib.parse import quote
-
-            def share_block(subscriber, cheapest, car_make=None):
-                fuel = 'diesel' if subscriber.get('fuel_type','').startswith('B7') else 'petrol'
-                name = cheapest.get('brand_clean') or cheapest.get('brand_name','') if cheapest else ''
-                price = cheapest.get('price') if cheapest else None
-                pc = subscriber.get('postcode','')
-                
-                if car_make and name and price:
-                    msg = f"I found {fuel} for my {car_make} at {name} for {price:.1f}p/litre — sign up free at https://fuelalert.co.uk 👇"
-                elif name and price:
-                    msg = f"Found {fuel} at {name} for {price:.1f}p/litre near {pc} — sign up free at https://fuelalert.co.uk 👇"
-                else:
-                    msg = f"Tracking cheap {fuel} prices near {pc} with FuelAlerts — free at https://fuelalert.co.uk 👇"
-                
-                enc = quote(msg)
-                return f"""
             <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
             <tr><td style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.2);border-radius:12px;padding:20px 24px;">
               <p style="font-size:11px;font-weight:700;color:#00e676;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;">⚡ Help a friend save too</p>

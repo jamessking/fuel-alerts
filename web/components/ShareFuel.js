@@ -11,10 +11,10 @@ export default function ShareFuel({ carMake, stationName, price, fuelLabel = 'fu
   const url = 'https://fuelalert.co.uk'
 
   const message = carMake && stationName && priceStr
-    ? `I found ${fuelLabel} for my ${carMake} at ${stationName} for ${priceStr} — sign up free at ${url} 👇`
+    ? `I found ${fuelLabel} for my ${carMake} at ${stationName} for ${priceStr} — check your area and let me know if you find cheaper!😉 \n${url} 👇`
     : stationName && priceStr
-    ? `Found ${fuelLabel} at ${stationName} for ${priceStr} near ${postcode} — sign up free at ${url} 👇`
-    : `Tracking the cheapest ${fuelLabel} prices near ${postcode} with FuelAlerts — free at ${url} 👇`
+    ? `Found ${fuelLabel} at ${stationName} for ${priceStr} near ${postcode} — check your area and let me know if you find cheaper!😉 \n${url} 👇`
+    : `Tracking the cheapest ${fuelLabel} prices near ${postcode} with FuelAlerts — free at \n${url} 👇`
 
   const enc = encodeURIComponent(message)
 
