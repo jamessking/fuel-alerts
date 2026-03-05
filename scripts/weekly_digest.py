@@ -933,7 +933,7 @@ def build_email_html(
                 <td style="padding-right:8px;"><a href="sms:?body={enc}" style="display:inline-block;background:#1e2d4a;color:#64b4ff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;text-decoration:none;border:1px solid #2a3f6a;">📱 iMessage</a></td>
                 <td><a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Ffuelalert.co.uk" style="display:inline-block;background:#1877F2;color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;text-decoration:none;">f Facebook</a></td>
               </tr></table>
-            </td></tr></table>"""
+            </td></tr></table>
           <!-- ── FOOTER ── -->
           <tr>
             <td style="background:{C_NAVY};border:1px solid {C_BORDER};border-top:none;
