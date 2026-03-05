@@ -12,6 +12,8 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="supported-color-schemes" content="dark light">
 </head>
 <body style="background:#0a0f1e; padding:40px 20px; font-family:Arial,sans-serif; color:#f0f4ff;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; margin:0 auto;">
@@ -24,11 +26,14 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
     <tr>
       <td style="background:#111827; border:1px solid #1e2d4a; border-radius:20px; padding:40px 36px;">
         <p style="font-size:36px; margin-bottom:20px;">✓</p>
-        <h1 style="font-weight:800; font-size:26px; color:#f0f4ff; letter-spacing:-0.03em; margin-bottom:12px;">One step to go</h1>
+        <h1 style="font-weight:800; font-size:26px; color:#f0f4ff; letter-spacing:-0.03em; margin-bottom:12px;">Confirm your FuelAlerts signup</h1>
         <p style="font-size:15px; color:#8899bb; line-height:1.7; margin-bottom:32px; font-weight:300;">
           Confirm your email and we'll start watching fuel prices near you.
           You'll get a weekly digest showing the cheapest stations in your area — no app needed.
         </p>
+		<p style="font-size:14px; color:#4ade80; margin-bottom:28px;">
+			Drivers typically save £100+ per year just by filling up at the cheapest station nearby.
+		</p>
         <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
           <tr>
             <td style="background:#00e676; border-radius:10px;">
@@ -51,14 +56,18 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
         </div>
       </td>
     </tr>
-	<p style="text-align:center; margin-top:16px;">
-		<a href="${BASE_URL}/unsubscribe?token=${unsubscribeToken}" 
-		style="font-size:11px; color:#4a5a7a;">Unsubscribe</a>
-	</p>
+	<tr>
+	  <td style="text-align:center; padding-top:16px;">
+		<a href="${BASE_URL}/unsubscribe?token=${unsubscribeToken}"
+		   style="font-size:11px; color:#4a5a7a;">
+		   Unsubscribe
+		</a>
+	  </td>
+	</tr>
     <tr>
       <td style="padding-top:28px; text-align:center;">
         <p style="font-size:12px; color:#4a5a7a; line-height:1.6;">
-          You signed up at fuelalert.co.uk If that wasn't you, ignore this email.
+          You signed up at fuelalert.co.uk. If that wasn't you, ignore this email.
         </p>
       </td>
     </tr>

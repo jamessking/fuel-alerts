@@ -155,9 +155,7 @@ export default function Confirm() {
                       })()}
                     </div>
                   )}
-					<div style={{marginTop:'16px', fontWeight:500}}>
-					  Share this price with a friend 👇
-					</div>				
+								
                   <ShareFuel
                     carMake={data.car_make}
                     stationName={data.stations?.[0]?.display_name}
