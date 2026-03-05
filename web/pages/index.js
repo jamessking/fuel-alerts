@@ -221,8 +221,8 @@ export default function Home() {
               🇬🇧 UK Government fuel data · Updated daily
             </div>
             <h1 className={`${styles.heroTitle} animate-fade-up delay-2`}>
-              UK ave price today.<br />
-              <span className={styles.accent}>Find yours cheaper.</span>
+              UK average prices today.<br />
+              <span className={styles.accent}>Find your fuel cheaper.</span>
             </h1>
             <p className={`${styles.heroSub} animate-fade-up delay-3`}>
               FuelAlerts watches 7,150+ UK fuel stations so you don't have to.
@@ -527,7 +527,7 @@ export default function Home() {
                 {submitError && <div className={styles.submitError}>{submitError}</div>}
 
                 <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Signing up...' : 'Get my FuelAlerts →'}
+                  {submitting ? 'Signing up...' : 'Get my FuelAlerts Free Email →'}
                 </button>
 
                 <p className={styles.formFootnote}>
@@ -622,7 +622,7 @@ export default function Home() {
             <h2>Ready to stop overpaying?</h2>
             <p>Join the drivers already getting smarter about fuel.</p>
             <a href="#top" className={styles.ctaBtn} onClick={e => { e.preventDefault(); window.scrollTo({top: 0, behavior: 'smooth'}) }}>
-              Get started →
+              Get started with your free email today →
             </a>
           </div>
         </section>
