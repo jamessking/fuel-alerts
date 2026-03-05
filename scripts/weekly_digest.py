@@ -924,15 +924,6 @@ def build_email_html(
               </a>
             </td>
           </tr>
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
-            <tr><td style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.2);border-radius:12px;padding:20px 24px;">
-              <p style="font-size:11px;font-weight:700;color:#00e676;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;">⚡ Help a friend save too</p>
-              <p style="font-size:13px;color:#8899bb;font-style:italic;margin:0 0 16px;">"{msg}"</p>
-              <table cellpadding="0" cellspacing="0"><tr>
-                <td style="padding-right:8px;"><a href="https://wa.me/?text={enc}" style="display:inline-block;background:#25D366;color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;text-decoration:none;">💬 WhatsApp</a></td>
-                <td style="padding-right:8px;"><a href="sms:?body={enc}" style="display:inline-block;background:#1e2d4a;color:#64b4ff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;text-decoration:none;border:1px solid #2a3f6a;">📱 iMessage</a></td>
-                <td><a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Ffuelalert.co.uk" style="display:inline-block;background:#1877F2;color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;text-decoration:none;">f Facebook</a></td>
-              </tr></table>
             </td></tr></table>
           <!-- ── FOOTER ── -->
           <tr>
