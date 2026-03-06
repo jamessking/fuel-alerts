@@ -91,7 +91,7 @@ export default function Privacy() {
 
             <div className={styles.section}>
               <h2>Contact</h2>
-              <p>For any privacy-related questions or data requests, please email: <a href="mailto:jamessking76@gmail.com">jamessking76@gmail.com</a></p>
+              <p>For any privacy-related questions or data requests, please email: <a href="mailto:james@fuelalert.co.uk">james@fuelalert.co.uk</a></p>
             </div>
           </div>
         </div>
