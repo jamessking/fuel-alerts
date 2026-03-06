@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
   const { data: subscriber, error } = await supabase
     .from('subscribers')
-    .select('id, status, lat, lon, fuel_type, radius_miles, postcode, annual_miles, mpg')
+    .select('id, status, lat, lon, fuel_type, radius_miles, postcode, annual_miles, mpg, vehicle_reg, vehicle_make, vehicle_year')
     .eq('confirm_token_hash', tokenHash)
     .single()
 
@@ -116,8 +116,10 @@ export default async function handler(req, res) {
 	annual_miles: subscriber.annual_miles,
 	mpg: subscriber.mpg,
     stations,
-	car_make: subscriber.vehicle?.make 
-  ? subscriber.vehicle.make.charAt(0) + subscriber.vehicle.make.slice(1).toLowerCase()
-  : null,
+	car_make: subscriber.vehicle_make
+      ? subscriber.vehicle_make.charAt(0).toUpperCase() + subscriber.vehicle_make.slice(1).toLowerCase()
+      : null,
+    vehicle_reg:  subscriber.vehicle_reg  || null,
+    vehicle_year: subscriber.vehicle_year || null,
   })
 }

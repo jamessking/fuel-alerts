@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, postcode, lat, lon, fuel_type, radius_miles, annual_miles, mpg, tank_litres } = req.body
+  const { email, postcode, lat, lon, fuel_type, radius_miles, annual_miles, mpg, tank_litres, vehicle } = req.body
 
   if (!email || !postcode || !lat || !lon || !fuel_type) {
     return res.status(400).json({ error: 'Missing required fields' })
@@ -143,7 +143,7 @@ export default async function handler(req, res) {
   }
 
   // Insert new subscriber
-  const { error } = await supabase
+  const { data: newSub, error } = await supabase
     .from('subscribers')
     .insert({
       email: email.toLowerCase().trim(),
@@ -159,10 +159,46 @@ export default async function handler(req, res) {
       annual_miles: annual_miles || null,
       mpg: mpg || null,
       tank_litres: tank_litres || null,
+      // Vehicle summary — written directly for easy access in emails/confirm page
+      vehicle_reg:  vehicle?.reg  || null,
+      vehicle_make: vehicle?.make || null,
+      vehicle_year: vehicle?.year || null,
     })
+    .select('id')
+    .single()
 
   if (error) {
     return res.status(500).json({ error: 'Failed to save subscription. Please try again.' })
+  }
+
+  // Write full DVLA vehicle record to subscriber_vehicles
+  if (newSub?.id && vehicle?.reg) {
+    await supabase
+      .from('subscriber_vehicles')
+      .insert({
+        subscriber_id:             newSub.id,
+        vehicle_reg:               vehicle.reg,
+        make:                      vehicle.make               || null,
+        year:                      vehicle.year               || null,
+        month_of_first_regis:      vehicle.monthOfFirstRegistration || null,
+        fuel_type:                 vehicle.fuelType           || null,
+        colour:                    vehicle.colour             || null,
+        engine_capacity:           vehicle.engineCapacity     || null,
+        co2_emissions:             vehicle.co2Emissions       || null,
+        euro_status:               vehicle.euroStatus         || null,
+        tax_status:                vehicle.taxStatus          || null,
+        tax_due_date:              vehicle.taxDueDate         || null,
+        mot_status:                vehicle.motStatus          || null,
+        mot_expiry_date:           vehicle.motExpiryDate      || null,
+        type_approval:             vehicle.typeApproval       || null,
+        wheelplan:                 vehicle.wheelplan          || null,
+        revenue_weight:            vehicle.revenueWeight      || null,
+        marked_for_export:         vehicle.markedForExport    || false,
+      })
+      // Non-fatal — don't block signup if this fails
+      .then(({ error: vErr }) => {
+        if (vErr) console.error('subscriber_vehicles insert error:', vErr)
+      })
   }
 
   try {
