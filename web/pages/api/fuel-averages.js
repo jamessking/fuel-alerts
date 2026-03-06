@@ -8,7 +8,7 @@ const supabase = createClient(
 
 let cache = null
 let cacheTime = null
-const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
 async function getLatestSnapshotDate() {
   const { data } = await supabase
@@ -24,88 +24,98 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
   if (cache && cacheTime && Date.now() - cacheTime < CACHE_TTL_MS) {
+    res.setHeader('X-Cache', 'HIT')
     return res.status(200).json(cache)
   }
 
   try {
     const todayStr = await getLatestSnapshotDate()
-    const weekAgoStr = new Date(new Date(todayStr).getTime() - 7 * 86400000).toISOString().split('T')[0]
+    const weekAgoStr = new Date(new Date(todayStr).getTime() - 7 * 86400000)
+      .toISOString().split('T')[0]
 
-    const [pricesRes, weekAgoRes, stationsRes] = await Promise.all([
-      supabase
-        .from('fuel_prices_daily')
-        .select('node_id, fuel_type, price')
-        .eq('snapshot_date', todayStr)
-        .in('fuel_type', ['E10', 'B7', 'B7_STANDARD']),
-      supabase
-        .from('fuel_prices_daily')
-        .select('node_id, fuel_type, price')
-        .eq('snapshot_date', weekAgoStr)
-        .in('fuel_type', ['E10', 'B7', 'B7_STANDARD']),
-      supabase
-        .from('pfs_stations')
-        .select('node_id, country, is_motorway_service_station, is_supermarket_service_station'),
-    ])
+    // Single RPC call — SQL does the join + aggregation server-side
+    // No row-limit issues, no massive .in() queries
+    const { data: rows, error } = await supabase.rpc('get_fuel_averages', {
+      p_today:    todayStr,
+      p_week_ago: weekAgoStr,
+    })
 
-    if (pricesRes.error) throw pricesRes.error
-    if (stationsRes.error) throw stationsRes.error
+    if (error) throw error
 
-    const stationMap = {}
-    for (const s of stationsRes.data) stationMap[s.node_id] = s
+    // Index rows: country -> fuel_type -> stats
+    const idx = {}
+    for (const r of rows) {
+      if (!idx[r.country]) idx[r.country] = {}
+      idx[r.country][r.fuel_type] = r
+    }
 
-    const enrich = (rows) => rows.map(p => ({ ...p, station: stationMap[p.node_id] || {} }))
-    const prices = enrich(pricesRes.data)
-    const lastWeekPrices = enrich(weekAgoRes.data || [])
-
-    const avg = (arr) => arr.length
-      ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length * 10) / 10
-      : null
-
-    const toP = (subset) => subset.map(p => parseFloat(p.price)).filter(Boolean)
-
-    const build = (fuel) => {
-      const fuelCodes = fuel === 'B7' ? ['B7', 'B7_STANDARD'] : [fuel]
-      const rows = prices.filter(p => fuelCodes.includes(p.fuel_type))
-      const lastRows = lastWeekPrices.filter(p => fuelCodes.includes(p.fuel_type))
-
-      const byCountry = (src, country) =>
-        src.filter(p => (p.station?.country || '').toLowerCase() === country.toLowerCase())
-
-      const motorway = (s) => s.filter(p => p.station?.is_motorway_service_station === true)
-      const supermarket = (s) => s.filter(p => p.station?.is_supermarket_service_station === true)
-      const forecourt = (s) => s.filter(p => !p.station?.is_motorway_service_station && !p.station?.is_supermarket_service_station)
-
-      const summary = (subset, lastSubset) => {
-        const curAvg = avg(toP(subset))
-        const prevAvg = avg(toP(lastSubset))
-        const weekDelta = curAvg !== null && prevAvg !== null
-          ? Math.round((curAvg - prevAvg) * 10) / 10
-          : null
+    // Merge B7 + B7_STANDARD into one diesel figure
+    const diesel = (country) => {
+      const b7  = idx[country]?.['B7']
+      const b7s = idx[country]?.['B7_STANDARD']
+      // Prefer whichever has data; average both if both present
+      if (b7 && b7s) {
+        const avg = (a, b) => a != null && b != null
+          ? Math.round(((parseFloat(a) + parseFloat(b)) / 2) * 10) / 10
+          : (a ?? b)
         return {
-          avg: curAvg,
-          weekDelta,
-          motorway: avg(toP(motorway(subset))),
-          supermarket: avg(toP(supermarket(subset))),
-          forecourt: avg(toP(forecourt(subset))),
+          avg:        avg(b7.avg_price, b7s.avg_price),
+          weekDelta:  avg(b7.avg_price_week_ago, b7s.avg_price_week_ago) != null
+            ? Math.round(((parseFloat(b7.avg_price ?? b7s.avg_price) -
+                parseFloat(b7.avg_price_week_ago ?? b7s.avg_price_week_ago))) * 10) / 10
+            : null,
+          motorway:   avg(b7.avg_motorway, b7s.avg_motorway),
+          supermarket: avg(b7.avg_supermarket, b7s.avg_supermarket),
+          forecourt:  avg(b7.avg_forecourt, b7s.avg_forecourt),
         }
       }
-
+      const src = b7s || b7
+      if (!src) return { avg: null, weekDelta: null, motorway: null, supermarket: null, forecourt: null }
       return {
-        uk:       summary(rows, lastRows),
-        england:  summary(byCountry(rows, 'england'),          byCountry(lastRows, 'england')),
-        scotland: summary(byCountry(rows, 'scotland'),         byCountry(lastRows, 'scotland')),
-        wales:    summary(byCountry(rows, 'wales'),            byCountry(lastRows, 'wales')),
-        ni:       summary(byCountry(rows, 'northern ireland'), byCountry(lastRows, 'northern ireland')),
+        avg:         src.avg_price        != null ? parseFloat(src.avg_price)        : null,
+        weekDelta:   src.avg_price != null && src.avg_price_week_ago != null
+          ? Math.round((parseFloat(src.avg_price) - parseFloat(src.avg_price_week_ago)) * 10) / 10
+          : null,
+        motorway:    src.avg_motorway     != null ? parseFloat(src.avg_motorway)     : null,
+        supermarket: src.avg_supermarket  != null ? parseFloat(src.avg_supermarket)  : null,
+        forecourt:   src.avg_forecourt    != null ? parseFloat(src.avg_forecourt)    : null,
+      }
+    }
+
+    const petrol = (country) => {
+      const src = idx[country]?.['E10']
+      if (!src) return { avg: null, weekDelta: null, motorway: null, supermarket: null, forecourt: null }
+      return {
+        avg:         src.avg_price        != null ? parseFloat(src.avg_price)        : null,
+        weekDelta:   src.avg_price != null && src.avg_price_week_ago != null
+          ? Math.round((parseFloat(src.avg_price) - parseFloat(src.avg_price_week_ago)) * 10) / 10
+          : null,
+        motorway:    src.avg_motorway     != null ? parseFloat(src.avg_motorway)     : null,
+        supermarket: src.avg_supermarket  != null ? parseFloat(src.avg_supermarket)  : null,
+        forecourt:   src.avg_forecourt    != null ? parseFloat(src.avg_forecourt)    : null,
       }
     }
 
     cache = {
-      unleaded: build('E10'),
-      diesel: build('B7'),
+      unleaded: {
+        uk:       petrol('uk'),
+        england:  petrol('england'),
+        scotland: petrol('scotland'),
+        wales:    petrol('wales'),
+        ni:       petrol('northern ireland'),
+      },
+      diesel: {
+        uk:       diesel('uk'),
+        england:  diesel('england'),
+        scotland: diesel('scotland'),
+        wales:    diesel('wales'),
+        ni:       diesel('northern ireland'),
+      },
       updatedAt: todayStr,
     }
     cacheTime = Date.now()
 
+    res.setHeader('X-Cache', 'MISS')
     res.status(200).json(cache)
   } catch (err) {
     console.error('fuel-averages error:', err)

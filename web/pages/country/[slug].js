@@ -87,58 +87,38 @@ export async function getStaticProps({ params }) {
 
   const today = await getLatestSnapshotDate()
 
-  const { data: stations } = await supabase
-    .from('pfs_stations')
-    .select('node_id, county')
-    .ilike('country', country)
-    .neq('permanent_closure', true)
+  // Two RPC calls — both do server-side joins, no row limit issues
+  const [statsRes, regionsRes] = await Promise.all([
+    supabase.rpc('get_country_stats', {
+      p_country: country,
+      p_today:   today,
+    }),
+    supabase.rpc('get_country_regions', {
+      p_country: country,
+      p_today:   today,
+    }),
+  ])
 
-  if (!stations) return { notFound: true }
+  if (statsRes.error) console.error('get_country_stats error:', statsRes.error)
+  if (regionsRes.error) console.error('get_country_regions error:', regionsRes.error)
 
-  const nodeIds = stations.map(s => s.node_id)
-
-  const { data: prices } = await supabase
-    .from('fuel_prices_daily')
-    .select('node_id, fuel_type, price')
-    .in('node_id', nodeIds)
-    .eq('snapshot_date', today)
-    .in('fuel_type', ['E10', 'B7_STANDARD'])
-
-  const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
-  const petrolPrices = (prices || []).filter(p => p.fuel_type === 'E10').map(p => parseFloat(p.price))
-  const dieselPrices = (prices || []).filter(p => p.fuel_type === 'B7_STANDARD').map(p => parseFloat(p.price))
-
-  const stationMap = {}
-  for (const s of stations) stationMap[s.node_id] = s
-  const countyData = {}
-  for (const p of (prices || [])) {
-    const county = stationMap[p.node_id]?.county
-    if (!county) continue
-    if (!countyData[county]) countyData[county] = { petrol: [], diesel: [], count: 0 }
-    if (p.fuel_type === 'E10') countyData[county].petrol.push(parseFloat(p.price))
-    if (p.fuel_type === 'B7_STANDARD') countyData[county].diesel.push(parseFloat(p.price))
-  }
-  for (const s of stations) {
-    if (s.county && countyData[s.county]) countyData[s.county].count++
-  }
-
-  const regions = Object.entries(countyData)
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 30)
-    .map(([region, d]) => ({
-      region,
-      slug: toSlug(region),
-      stationCount: d.count,
-      avgPetrol: d.petrol.length ? Math.round(avg(d.petrol) * 10) / 10 : null,
-      avgDiesel: d.diesel.length ? Math.round(avg(d.diesel) * 10) / 10 : null,
-    }))
+  const stats   = statsRes.data?.[0] || {}
+  const regions = (regionsRes.data || []).map(r => ({
+    region:       r.county,
+    slug:         toSlug(r.county),
+    stationCount: Number(r.station_count),
+    avgPetrol:    r.avg_petrol   != null ? parseFloat(r.avg_petrol)  : null,
+    avgDiesel:    r.avg_diesel   != null ? parseFloat(r.avg_diesel)  : null,
+  }))
 
   return {
     props: {
-      country, slug, regions,
-      stationCount: stations.length,
-      avgPetrol: avg(petrolPrices) ? Math.round(avg(petrolPrices) * 10) / 10 : null,
-      avgDiesel: avg(dieselPrices) ? Math.round(avg(dieselPrices) * 10) / 10 : null,
+      country,
+      slug,
+      regions,
+      stationCount: Number(stats.station_count || 0),
+      avgPetrol:    stats.avg_petrol != null ? parseFloat(stats.avg_petrol) : null,
+      avgDiesel:    stats.avg_diesel != null ? parseFloat(stats.avg_diesel) : null,
     },
     revalidate: 6 * 60 * 60,
   }
