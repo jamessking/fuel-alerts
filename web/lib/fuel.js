@@ -12,7 +12,6 @@ export function fromSlug(slug) {
 }
 
 // Returns the most recent snapshot date in the DB — never hardcodes today.
-// Falls back gracefully if ingest failed — always returns last good data.
 let _snapshotDateCache = null
 let _snapshotDateExpiry = 0
 
@@ -33,16 +32,9 @@ export async function getLatestSnapshotDate() {
   return date
 }
 
-// Fast: single SQL aggregate — no full table scan
 export async function getAllTowns() {
-  const { data, error } = await supabase
-    .rpc('get_towns_with_counts')
-
-  if (error || !data) {
-    console.error('getAllTowns error:', error)
-    return []
-  }
-
+  const { data, error } = await supabase.rpc('get_towns_with_counts')
+  if (error || !data) { console.error('getAllTowns error:', error); return [] }
   return data.map(r => ({
     city: r.city,
     slug: toSlug(r.city),
@@ -52,11 +44,8 @@ export async function getAllTowns() {
 }
 
 export async function getAllRegions() {
-  const { data, error } = await supabase
-    .rpc('get_regions_with_counts')
-
+  const { data, error } = await supabase.rpc('get_regions_with_counts')
   if (error || !data) return []
-
   return data.map(r => ({
     region: r.county,
     slug: toSlug(r.county),
@@ -64,53 +53,37 @@ export async function getAllRegions() {
   }))
 }
 
-// Core data fetch for a town page
 export async function getTownData(cityName) {
   const today = await getLatestSnapshotDate()
-  const weekAgo = new Date(new Date(today).getTime() - 7 * 86400000).toISOString().split('T')[0]
+  const weekAgo  = new Date(new Date(today).getTime() -  7 * 86400000).toISOString().split('T')[0]
   const thirtyAgo = new Date(new Date(today).getTime() - 30 * 86400000).toISOString().split('T')[0]
 
   const { data: stations } = await supabase
     .from('pfs_stations')
-    .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, address, address2, is_motorway_service_station, is_supermarket_service_station, latitude, longitude, amenities')
+    .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, is_motorway_service_station, is_supermarket_service_station, latitude, longitude, amenities')
     .ilike('city', cityName)
     .neq('permanent_closure', true)
     .neq('is_motorway_service_station', true)
 
   if (!stations || stations.length === 0) return null
 
-const { data: pricesData } = await supabase
-  .from('fuel_prices_daily')
-  .select(`
-    node_id,
-    fuel_type,
-    price,
-    snapshot_date,
-    pfs_stations!inner(
-      node_id,
-      trading_name,
-      brand_name,
-      brand_clean,
-      logo_url,
-      city,
-      county,
-      country,
-      postcode,
-      is_motorway_service_station,
-      is_supermarket_service_station
-    )
-  `)
-  .eq('snapshot_date', today)
-  .ilike('pfs_stations.city', cityName)
-  .neq('pfs_stations.permanent_closure', true)
-  .neq('pfs_stations.is_motorway_service_station', true)
-  .in('fuel_type', ['E10', 'B7_STANDARD'])
+  const nodeIds = stations.map(s => s.node_id)
+
+  const [pricesRes, lastWeekRes, historyRes] = await Promise.all([
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
+      .in('node_id', nodeIds).eq('snapshot_date', today).in('fuel_type', ['E10', 'B7_STANDARD']),
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
+      .in('node_id', nodeIds).eq('snapshot_date', weekAgo).in('fuel_type', ['E10', 'B7_STANDARD']),
+    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price, snapshot_date')
+      .in('node_id', nodeIds).gte('snapshot_date', thirtyAgo).lte('snapshot_date', today)
+      .in('fuel_type', ['E10', 'B7_STANDARD']).order('snapshot_date', { ascending: true }),
+  ])
 
   const prices = pricesRes.data || []
   const lastWeekPrices = lastWeekRes.data || []
   const history = historyRes.data || []
 
-  //if (prices.length === 0) return null - removed for testing
+  if (prices.length === 0) return null
 
   const stationMap = {}
   for (const s of stations) stationMap[s.node_id] = s
@@ -125,23 +98,23 @@ const { data: pricesData } = await supabase
   const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
   const toP = (arr, fuel) => arr.filter(p => p.fuel_type === fuel).map(p => parseFloat(p.price))
 
-  const petrol = enriched.filter(p => p.fuel_type === 'E10').sort((a, b) => a.price - b.price)
-  const diesel = enriched.filter(p => p.fuel_type === 'B7_STANDARD').sort((a, b) => a.price - b.price)
+  const petrol   = enriched.filter(p => p.fuel_type === 'E10').sort((a, b) => a.price - b.price)
+  const diesel   = enriched.filter(p => p.fuel_type === 'B7_STANDARD').sort((a, b) => a.price - b.price)
   const allSorted = [...enriched].sort((a, b) => a.price - b.price)
 
-  const avgPetrol = avg(toP(enriched, 'E10'))
-  const avgDiesel = avg(toP(enriched, 'B7_STANDARD'))
-  const lastWeekAvgPetrol = avg(toP(lastWeekPrices, 'E10'))
-  const lastWeekAvgDiesel = avg(toP(lastWeekPrices, 'B7_STANDARD'))
+  const avgPetrol          = avg(toP(enriched, 'E10'))
+  const avgDiesel          = avg(toP(enriched, 'B7_STANDARD'))
+  const lastWeekAvgPetrol  = avg(toP(lastWeekPrices, 'E10'))
+  const lastWeekAvgDiesel  = avg(toP(lastWeekPrices, 'B7_STANDARD'))
 
-  const supermarketPetrol = petrol.filter(p => p.is_supermarket_service_station)
-  const independentPetrol = petrol.filter(p => !p.is_supermarket_service_station)
+  const supermarketPetrol  = petrol.filter(p => p.is_supermarket_service_station)
+  const independentPetrol  = petrol.filter(p => !p.is_supermarket_service_station)
 
   const chartData = {}
   for (const row of history) {
     const d = row.snapshot_date
     if (!chartData[d]) chartData[d] = { date: d, petrol: [], diesel: [] }
-    if (row.fuel_type === 'E10') chartData[d].petrol.push(parseFloat(row.price))
+    if (row.fuel_type === 'E10')        chartData[d].petrol.push(parseFloat(row.price))
     if (row.fuel_type === 'B7_STANDARD') chartData[d].diesel.push(parseFloat(row.price))
   }
   const chartSeries = Object.values(chartData)
@@ -158,12 +131,12 @@ const { data: pricesData } = await supabase
     country: stations[0]?.country || null,
     stationCount: stations.length,
     updatedAt: today,
-    avgPetrol: avgPetrol ? Math.round(avgPetrol * 10) / 10 : null,
-    avgDiesel: avgDiesel ? Math.round(avgDiesel * 10) / 10 : null,
+    avgPetrol:         avgPetrol  ? Math.round(avgPetrol  * 10) / 10 : null,
+    avgDiesel:         avgDiesel  ? Math.round(avgDiesel  * 10) / 10 : null,
     lastWeekAvgPetrol: lastWeekAvgPetrol ? Math.round(lastWeekAvgPetrol * 10) / 10 : null,
     lastWeekAvgDiesel: lastWeekAvgDiesel ? Math.round(lastWeekAvgDiesel * 10) / 10 : null,
-    cheapestPetrol: petrol[0] || null,
-    cheapestDiesel: diesel[0] || null,
+    cheapestPetrol:    petrol[0]  || null,
+    cheapestDiesel:    diesel[0]  || null,
     mostExpensivePetrol: petrol[petrol.length - 1] || null,
     cheapestSupermarket: supermarketPetrol[0] || null,
     cheapestIndependent: independentPetrol[0] || null,
