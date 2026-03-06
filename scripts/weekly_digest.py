@@ -65,17 +65,44 @@ def station_display_name(st: dict) -> str:
         return brand if len(brand) <= 3 else brand.title()
     return trading.title() if trading else "Independent"
 
-def logo_pill(logo_url: str, alt: str, width: int = 64, height: int = 36) -> str:
-    """Wrap logo in white pill for dark backgrounds"""
-    if not logo_url:
-        return ""
+def logo_pill(logo_url: str, alt: str, size: int = 48) -> str:
+    """
+    Square iOS-style icon — white background, rounded corners.
+    Table-based layout for full email client compatibility (no flexbox/object-fit).
+    Shows brand logo if available, fuel pump placeholder if not.
+    """
     safe_alt = (alt or "").replace('"', '&quot;')
+    radius = int(size * 0.22)
+    img_size = int(size * 0.75)
+    pad = (size - img_size) // 2
+
+    if logo_url:
+        inner = (
+            f'<table role="presentation" width="{size}" height="{size}" '
+            f'cellspacing="0" cellpadding="0" border="0">'
+            f'<tr><td align="center" valign="middle" style="padding:{pad}px;">'
+            f'<img src="{logo_url}" width="{img_size}" height="{img_size}" '
+            f'alt="{safe_alt}" border="0" '
+            f'style="display:block;width:{img_size}px;height:{img_size}px;" />'
+            f'</td></tr></table>'
+        )
+    else:
+        fsize = int(size * 0.48)
+        inner = (
+            f'<table role="presentation" width="{size}" height="{size}" '
+            f'cellspacing="0" cellpadding="0" border="0">'
+            f'<tr><td align="center" valign="middle">'
+            f'<span style="font-size:{fsize}px;line-height:1;color:#999999;">&#9981;</span>'
+            f'</td></tr></table>'
+        )
+
     return (
-        f'<div style="display:inline-block;background:#ffffff;border-radius:8px;'
-        f'padding:5px 10px;margin-bottom:8px;">'
-        f'<img src="{logo_url}" width="{width}" height="{height}" '
-        f'style="display:block;object-fit:contain;vertical-align:middle;" alt="{safe_alt}" />'
-        f'</div>'
+        f'<table role="presentation" cellspacing="0" cellpadding="0" border="0" '
+        f'style="margin-bottom:10px;">'
+        f'<tr><td style="background:#ffffff;border-radius:{radius}px;'
+        f'width:{size}px;height:{size}px;overflow:hidden;">'
+        f'{inner}'
+        f'</td></tr></table>'
     )
 
 # -----------------------------
@@ -635,7 +662,14 @@ def build_email_html(
         pc    = esc(st.get("postcode") or "")
         lat   = st.get("lat") or st.get("latitude", 0)
         lon   = st.get("lon") or st.get("longitude", 0)
-        maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+        # Use coords if valid, fall back to postcode+name search for bad/missing coords
+        from urllib.parse import quote as _q
+        if lat and lon and (abs(float(lat)) > 0.001 or abs(float(lon)) > 0.001):
+            maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+        elif pc:
+            maps_url = f"https://www.google.com/maps?q={_q((name + ' ' + pc).strip())}"
+        else:
+            maps_url = f"https://www.google.com/maps?q=fuel+station"
         logo_url = st.get("logo_url", "")
         logo_url = logo_url or brand_logo_url(st)
         logo_html = logo_pill(logo_url, name)
@@ -680,10 +714,12 @@ def build_email_html(
                 <td style="padding:16px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
-                      <td style="vertical-align:middle;">
+                      <td style="vertical-align:middle;width:60px;padding-right:14px;">
                         {logo_html}
+                      </td>
+                      <td style="vertical-align:middle;">
                         <div style="font-size:10px;font-weight:800;color:{C_GREEN};
-                                    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">
+                                    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">
                           &#9733; Cheapest nearby
                         </div>
                         <div style="font-size:15px;font-weight:700;color:{C_TEXT};">{name}</div>
@@ -695,7 +731,7 @@ def build_email_html(
                           </a>
                         </div>
                       </td>
-                      <td align="right" style="vertical-align:middle;padding-left:12px;">
+                      <td align="right" style="vertical-align:middle;padding-left:12px;white-space:nowrap;">
                         <div style="font-family:Arial,sans-serif;font-size:36px;font-weight:900;
                                     color:{C_GREEN};letter-spacing:-1px;line-height:1;">
                           {price:.1f}p
@@ -717,6 +753,9 @@ def build_email_html(
                 <td style="padding:14px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
+                      <td style="vertical-align:middle;width:52px;padding-right:12px;">
+                        {logo_pill(logo_url, name, size=44)}
+                      </td>
                       <td style="vertical-align:middle;">
                         <div style="font-size:12px;font-weight:700;color:{C_FAINT};margin-bottom:4px;">
                           #{i+1}
@@ -730,7 +769,7 @@ def build_email_html(
                           </a>
                         </div>
                       </td>
-                      <td align="right" style="vertical-align:middle;padding-left:12px;">
+                      <td align="right" style="vertical-align:middle;padding-left:12px;white-space:nowrap;">
                         <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:800;
                                     color:{C_TEXT};letter-spacing:-0.5px;line-height:1;">
                           {price:.1f}p
@@ -778,9 +817,37 @@ def build_email_html(
 
     spacer = '<td style="width:12px;"></td>'
 
-    share_msg  = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — I found it on FuelAlerts. Check if it's cheap near you too: {site_url}"
-    from urllib.parse import quote
-    whatsapp_url = f"https://wa.me/?text={quote(share_msg)}"
+    from urllib.parse import quote as _qurlq
+    # Dynamic share message and CTA tone — based on price direction
+    if diff is not None and diff < -0.5:
+        # Prices dropped — good news to share
+        share_headline  = f"🎉 Good news — {fuel_label(fuel_type)} near {postcode} has dropped!"
+        share_subtext   = f"It's {cheapest_price:.1f}p/L at {esc(station_display_name(top_stations[0])) if top_stations else 'the cheapest station'} — {abs(diff):.1f}p cheaper than last week. Pass it on!"
+        cta_bg          = C_GREEN_DIM
+        cta_emoji       = "📣"
+        cta_btn_bg      = "#00c853"
+        cta_btn_label   = "Share the good news"
+        share_msg       = f"⛽ Fuel prices are DOWN near {postcode}! {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L — {abs(diff):.1f}p cheaper than last week. Found it on FuelAlerts 👉 {site_url}"
+    elif diff is not None and diff > 0.5:
+        # Prices rose — warn friends
+        share_headline  = f"⚠️ Heads up — {fuel_label(fuel_type)} prices have risen near {postcode}"
+        share_subtext   = f"It's now {cheapest_price:.1f}p/L — up {diff:.1f}p from last week. Let your mates know so they can plan ahead."
+        cta_bg          = "#b34000"
+        cta_emoji       = "📢"
+        cta_btn_bg      = "#e65100"
+        cta_btn_label   = "Warn your mates"
+        share_msg       = f"⛽ Fuel prices are UP near {postcode} — {fuel_label(fuel_type)} is now {cheapest_price:.1f}p/L (+{diff:.1f}p). Worth knowing before you fill up. Check FuelAlerts: {site_url}"
+    else:
+        # Prices stable or first report
+        share_headline  = f"Know someone who drives near {postcode}?"
+        share_subtext   = f"Send them this — if they fill a 50L tank at the cheapest spot vs the area average, they could save £{f'{(area_avg - cheapest_price) * 50 / 100:.2f}' if area_avg else 'money'}."
+        cta_bg          = C_NAVY_LIGHT
+        cta_emoji       = "📱"
+        cta_btn_bg      = "#25D366"
+        cta_btn_label   = "Share on WhatsApp"
+        share_msg       = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — found it on FuelAlerts. Check if it's cheap near you: {site_url}"
+
+    whatsapp_url = f"https://wa.me/?text={_qurlq(share_msg)}"
 
     return f"""<!doctype html>
 <html>
@@ -856,26 +923,27 @@ def build_email_html(
           <!-- ── SAVINGS STRIP ── -->
           {savings_strip}
 
-          <!-- ── CTA SHARE (prominent, right after savings strip) ── -->
+          <!-- ── CTA SHARE — dynamic based on price direction ── -->
           <tr>
-            <td style="background:{C_NAVY_LIGHT};border-left:1px solid {C_BORDER};
-                       border-right:1px solid {C_BORDER};padding:20px 32px;">
+            <td style="background:{cta_bg};border-left:1px solid {C_BORDER};
+                       border-right:1px solid {C_BORDER};padding:20px 32px;
+                       border-radius:0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:4px;">
-                      Know someone who drives near {postcode}?
+                    <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:6px;">
+                      {cta_emoji} {share_headline}
                     </div>
-                    <div style="font-size:12px;color:{C_MUTED};">
-                      Send them this price — if they fill a 50L tank at the cheapest station vs the area average, they'd save £{f"{(area_avg - cheapest_price) * 50 / 100:.2f}" if area_avg else "money"}
+                    <div style="font-size:12px;color:{C_MUTED};line-height:1.5;">
+                      {share_subtext}
                     </div>
                   </td>
                   <td align="right" style="vertical-align:middle;padding-left:16px;white-space:nowrap;">
                     <a href="{whatsapp_url}"
-                       style="display:inline-block;background:#25D366;border-radius:10px;
-                              padding:11px 22px;text-decoration:none;font-size:14px;
+                       style="display:inline-block;background:{cta_btn_bg};border-radius:10px;
+                              padding:11px 20px;text-decoration:none;font-size:13px;
                               font-weight:800;color:#ffffff;">
-                      &#128241; Share on WhatsApp
+                      &#128241; {cta_btn_label}
                     </a>
                   </td>
                 </tr>
