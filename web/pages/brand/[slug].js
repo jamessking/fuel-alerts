@@ -1,11 +1,13 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import styles from '../../styles/BrandPage.module.css'
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
 const toSlug = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+export default function BrandPage({ brand, stats, trend, slug }) {
   const [fuel, setFuel] = useState('E10')
   const [email, setEmail] = useState('')
   const [postcode, setPostcode] = useState('')
@@ -19,7 +21,7 @@ const toSlug = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
     </div>
   )
 
-  const avg     = stats.reduce((s, r) => s + parseFloat(r.price), 0) / stats.length
+  const avg = stats.reduce((s, r) => s + parseFloat(r.price), 0) / stats.length
   const cheapest = stats[0]
   const stationCount = stats.length
   const logoUrl = stats.find(s => s.logo_url)?.logo_url || null
@@ -157,7 +159,7 @@ const toSlug = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
                         <div className={styles.regionCount}>{r.count} stations</div>
                         <div className={styles.regionBar}>
                           <div className={styles.regionBarFill}
-                            style={{ width: `${Math.min(100, ((r.avg - regionRows[regionRows.length-1].avg) / Math.max(regionRows[0].avg - regionRows[regionRows.length-1].avg, 1)) * 100)}%` }} />
+                            style={{ width: `${Math.min(100, ((r.avg - regionRows[regionRows.length - 1].avg) / Math.max(regionRows[0].avg - regionRows[regionRows.length - 1].avg, 1)) * 100)}%` }} />
                         </div>
                         <div className={styles.regionPrice}>{fmt(Math.round(r.avg * 10) / 10)}</div>
                       </div>
@@ -319,7 +321,6 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   const { slug } = params
 
-  // Find brand name from slug
   const { data: allBrands } = await supabase.rpc('get_all_brand_averages', { p_fuel_type: 'E10', p_min_stations: 1 })
   const match = (allBrands || []).find(b => toSlug(b.brand_clean) === slug)
   if (!match) return { notFound: true }
