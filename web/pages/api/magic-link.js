@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
   const token = crypto.randomBytes(32).toString('hex')
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
-  const expiry = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+  const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
   await supabase
     .from('subscribers')
