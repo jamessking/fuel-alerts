@@ -58,6 +58,21 @@ export default function Home() {
   const [stationCount, setStationCount] = useState(null)
   const [stationCountLoading, setStationCountLoading] = useState(false)
   const [priceData, setPriceData] = useState(null)
+  const [locating, setLocating] = useState(false)
+
+  function handleGeolocate() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const { latitude, longitude } = pos.coords
+        const r = await fetch(`https://api.postcodes.io/postcodes?lon=${longitude}&lat=${latitude}&limit=1`)
+        const d = await r.json()
+        if (d.result?.[0]?.postcode) setPostcode(d.result[0].postcode)
+      } catch {}
+      setLocating(false)
+    }, () => setLocating(false))
+  }
   const [priceTab, setPriceTab] = useState('unleaded')
   const [nearbyStations, setNearbyStations] = useState([])
   const [nearbyLoading, setNearbyLoading] = useState(false)
@@ -327,71 +342,138 @@ export default function Home() {
               </div>
             )}
 
-            {/* Supermarket league table — hero layout */}
+            {/* Supermarket league table */}
             {(() => {
               const supers = (priceData?.supermarkets || [])
                 .filter(s => s.avg_petrol != null && s.brand !== 'Costco')
               if (!supers.length) return null
               const hero = supers[0]
-              const rest = supers.slice(1, 4)
+              const rest = supers.slice(1)
+              const toSlug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
               return (
                 <div style={{marginTop: '1.5rem', border: '1px solid #1e2d4a', borderRadius: '14px', overflow: 'hidden'}}>
-                  <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', padding: '0.75rem 1rem', borderBottom: '1px solid #1e2d4a', background: 'rgba(255,255,255,0.02)'}}>
-                    🛒 Cheapest supermarkets today
+                  <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', padding: '0.75rem 1rem', borderBottom: '1px solid #1e2d4a', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <span>🛒 Supermarket fuel prices today</span>
                   </div>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0'}}>
-
-                    {/* Hero — #1 cheapest */}
-                    <div style={{padding: '1.25rem', borderRight: '1px solid #1e2d4a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', background: 'rgba(0,230,118,0.03)'}}>
-                      <div style={{fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00e676'}}>
-                        #1 Cheapest this week
-                      </div>
-                      <div style={{width: '64px', height: '64px', borderRadius: '14px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
+                  {/* Hero — cheapest */}
+                  <a href={`/supermarket/${toSlug(hero.brand)}`} style={{textDecoration: 'none', display: 'block'}}>
+                    <div style={{padding: '1.1rem 1.25rem', borderBottom: '1px solid #1e2d4a', display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,230,118,0.03)', transition: 'background 0.15s', cursor: 'pointer'}}
+                      onMouseEnter={e => e.currentTarget.style.background='rgba(0,230,118,0.07)'}
+                      onMouseLeave={e => e.currentTarget.style.background='rgba(0,230,118,0.03)'}
+                    >
+                      <div style={{fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#00e676', minWidth: '1.5rem'}}>#1</div>
+                      <div style={{width: '40px', height: '40px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.25)'}}>
                         {hero.logo_url
                           ? <img src={hero.logo_url} alt={hero.brand} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
-                          : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '1.2rem'}}>{hero.brand.charAt(0)}</span>
+                          : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '0.9rem'}}>{hero.brand.charAt(0)}</span>
                         }
                       </div>
-                      <div style={{fontWeight: 700, fontSize: '0.95rem', color: '#f0f4ff'}}>{hero.brand}</div>
-                      <div style={{display: 'flex', gap: '1rem', marginTop: '0.25rem'}}>
-                        <div style={{textAlign: 'center'}}>
+                      <div style={{flex: 1}}>
+                        <div style={{fontWeight: 700, fontSize: '0.95rem', color: '#f0f4ff'}}>{hero.brand}</div>
+                        <div style={{fontSize: '0.7rem', color: '#4a5a7a', marginTop: '2px'}}>Cheapest supermarket this week</div>
+                      </div>
+                      <div style={{display: 'flex', gap: '0.75rem', alignItems: 'center'}}>
+                        <div style={{textAlign: 'right'}}>
                           <div style={{fontSize: '0.6rem', color: '#4a5a7a', textTransform: 'uppercase', letterSpacing: '0.06em'}}>Petrol</div>
-                          <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1.1rem', color: '#00e676'}}>{hero.avg_petrol.toFixed(1)}p</div>
+                          <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: '#00e676'}}>{hero.avg_petrol.toFixed(1)}p</div>
                         </div>
                         {hero.avg_diesel && (
-                          <div style={{textAlign: 'center'}}>
+                          <div style={{textAlign: 'right'}}>
                             <div style={{fontSize: '0.6rem', color: '#4a5a7a', textTransform: 'uppercase', letterSpacing: '0.06em'}}>Diesel</div>
-                            <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1.1rem', color: '#64b4ff'}}>{hero.avg_diesel.toFixed(1)}p</div>
+                            <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: '#64b4ff'}}>{hero.avg_diesel.toFixed(1)}p</div>
                           </div>
                         )}
+                        <div style={{color: '#4a5a7a', fontSize: '0.8rem'}}>›</div>
                       </div>
                     </div>
-
-                    {/* Rest — #2, #3, #4 */}
-                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                      {rest.map((s, i) => (
-                        <div key={s.brand} style={{display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1rem', borderBottom: i < rest.length - 1 ? '1px solid #1e2d4a' : 'none'}}>
-                          <span style={{fontSize: '0.7rem', color: '#4a5a7a', fontWeight: 700, width: '1rem', flexShrink: 0}}>#{i + 2}</span>
-                          <div style={{width: '32px', height: '32px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.2)'}}>
-                            {s.logo_url
-                              ? <img src={s.logo_url} alt={s.brand} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
-                              : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '0.75rem'}}>{s.brand.charAt(0)}</span>
-                            }
-                          </div>
-                          <div style={{flex: 1, minWidth: 0}}>
-                            <div style={{fontSize: '0.82rem', fontWeight: 600, color: '#c8d8f0'}}>{s.brand}</div>
-                            <div style={{display: 'flex', gap: '0.5rem', marginTop: '1px'}}>
-                              <span style={{fontSize: '0.7rem', color: '#00e676', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_petrol.toFixed(1)}p</span>
-                              {s.avg_diesel && <span style={{fontSize: '0.7rem', color: '#64b4ff', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_diesel.toFixed(1)}p</span>}
-                            </div>
+                  </a>
+                  {/* Rest */}
+                  {rest.map((s, i) => (
+                    <a key={s.brand} href={`/supermarket/${toSlug(s.brand)}`} style={{textDecoration: 'none', display: 'block'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1.25rem', borderBottom: i < rest.length - 1 ? '1px solid rgba(30,45,74,0.7)' : 'none', transition: 'background 0.1s', cursor: 'pointer'}}
+                        onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.025)'}
+                        onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                      >
+                        <span style={{fontSize: '0.7rem', color: '#4a5a7a', fontWeight: 700, width: '1.4rem', flexShrink: 0}}>#{i + 2}</span>
+                        <div style={{width: '32px', height: '32px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.2)'}}>
+                          {s.logo_url
+                            ? <img src={s.logo_url} alt={s.brand} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
+                            : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '0.75rem'}}>{s.brand.charAt(0)}</span>
+                          }
+                        </div>
+                        <div style={{flex: 1}}>
+                          <div style={{fontSize: '0.85rem', fontWeight: 600, color: '#c8d8f0'}}>{s.brand}</div>
+                        </div>
+                        <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                          <span style={{fontSize: '0.82rem', color: '#00e676', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_petrol.toFixed(1)}p</span>
+                          {s.avg_diesel && <span style={{fontSize: '0.82rem', color: '#64b4ff', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_diesel.toFixed(1)}p</span>}
+                          <span style={{color: '#4a5a7a', fontSize: '0.8rem'}}>›</span>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                  {/* Costco footnote */}
+                  {(priceData?.supermarkets || []).find(s => s.brand === 'Costco') && (() => {
+                    const costco = (priceData.supermarkets).find(s => s.brand === 'Costco')
+                    return (
+                      <a href="/supermarket/costco" style={{textDecoration: 'none', display: 'block'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', background: 'rgba(255,179,0,0.04)', borderTop: '1px solid rgba(30,45,74,0.7)', cursor: 'pointer', transition: 'background 0.1s'}}
+                          onMouseEnter={e => e.currentTarget.style.background='rgba(255,179,0,0.08)'}
+                          onMouseLeave={e => e.currentTarget.style.background='rgba(255,179,0,0.04)'}
+                        >
+                          <span style={{fontSize: '0.65rem', fontWeight: 800, color: '#ffb300', background: 'rgba(255,179,0,0.15)', border: '1px solid rgba(255,179,0,0.3)', borderRadius: '999px', padding: '2px 7px', whiteSpace: 'nowrap'}}>Members only</span>
+                          <div style={{flex: 1, fontSize: '0.82rem', color: '#c8d8f0', fontWeight: 600}}>Costco</div>
+                          <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                            {costco.avg_petrol && <span style={{fontSize: '0.82rem', color: '#00e676', fontFamily: 'monospace', fontWeight: 700}}>{costco.avg_petrol.toFixed(1)}p</span>}
+                            {costco.avg_diesel && <span style={{fontSize: '0.82rem', color: '#64b4ff', fontFamily: 'monospace', fontWeight: 700}}>{costco.avg_diesel.toFixed(1)}p</span>}
+                            <span style={{color: '#4a5a7a', fontSize: '0.8rem'}}>›</span>
                           </div>
                         </div>
-                      ))}
-                      {rest.length === 0 && (
-                        <div style={{padding: '1rem', color: '#4a5a7a', fontSize: '0.8rem'}}>No data</div>
-                      )}
-                    </div>
+                      </a>
+                    )
+                  })()}
+                </div>
+              )
+            })()}
 
+            {/* Brands box */}
+            {(() => {
+              const brands = (priceData?.brands || [])
+              if (!brands.length) return null
+              const toSlug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+              return (
+                <div style={{marginTop: '1rem', border: '1px solid #1e2d4a', borderRadius: '14px', overflow: 'hidden'}}>
+                  <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', padding: '0.75rem 1rem', borderBottom: '1px solid #1e2d4a', background: 'rgba(255,255,255,0.02)'}}>
+                    ⛽ Forecourt brand averages today
+                  </div>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr'}}>
+                    {brands.slice(0, 8).map((b, i) => (
+                      <a key={b.brand_clean} href={`/brand/${toSlug(b.brand_clean)}`} style={{textDecoration: 'none'}}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '0.6rem',
+                          padding: '0.65rem 1rem',
+                          borderRight: i % 2 === 0 ? '1px solid rgba(30,45,74,0.7)' : 'none',
+                          borderBottom: i < brands.slice(0, 8).length - 2 ? '1px solid rgba(30,45,74,0.7)' : 'none',
+                          cursor: 'pointer', transition: 'background 0.1s',
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.025)'}
+                          onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                        >
+                          {b.logo_url
+                            ? <div style={{width: '28px', height: '28px', borderRadius: '6px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
+                                <img src={b.logo_url} alt={b.brand_clean} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
+                              </div>
+                            : <div style={{width: '28px', height: '28px', borderRadius: '6px', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.75rem', fontWeight: 800, color: '#8899bb'}}>
+                                {b.brand_clean.charAt(0)}
+                              </div>
+                          }
+                          <div style={{flex: 1, minWidth: 0}}>
+                            <div style={{fontSize: '0.8rem', fontWeight: 600, color: '#c8d8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{b.brand_clean}</div>
+                            <div style={{fontSize: '0.75rem', fontFamily: 'monospace', color: '#00e676', fontWeight: 700}}>{b.avg_price?.toFixed(1)}p</div>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
                   </div>
                 </div>
               )
@@ -427,59 +509,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Town Price Search */}
-          <div className='animate-fade-up delay-2' style={{marginBottom: '1rem'}} ref={townRef}>
-            <div style={{background: '#111827', border: '1px solid #1e2d4a', borderRadius: '14px', padding: '1.25rem 1.5rem'}}>
-              <div style={{fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4a5a7a', marginBottom: '0.75rem'}}>
-                📍 Check prices in your town
-              </div>
-              <div style={{position: 'relative'}}>
-                <input
-                  type='text'
-                  value={townQuery}
-                  onChange={e => setTownQuery(e.target.value)}
-                  onFocus={() => townFiltered.length > 0 && setTownOpen(true)}
-                  placeholder='Start typing a town or city…'
-                  style={{
-                    width: '100%', background: '#0a0f1e', border: '1px solid',
-                    borderColor: townOpen ? '#00e676' : '#1e2d4a',
-                    borderRadius: '10px', padding: '0.75rem 1rem', color: '#f0f4ff',
-                    fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
-                  }}
-                />
-                {townOpen && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                    background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px',
-                    overflow: 'hidden', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                  }}>
-                    {townFiltered.map(t => (
-                      <div
-                        key={t.city}
-                        onMouseDown={() => {
-                          const slug = t.city.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-')
-                          window.location.href = '/town/' + slug
-                        }}
-                        style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '0.65rem 1rem', cursor: 'pointer', borderBottom: '1px solid #0f1829',
-                          transition: 'background 0.1s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#1e2d4a'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <span style={{fontSize: '0.9rem', color: '#f0f4ff', fontWeight: 500}}>{t.city}</span>
-                        <span style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{t.count} stations</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sign Up Form */}
-          <div className={`${styles.formCard} animate-fade-up delay-3`}>
+          {/* Sign Up Form — integrated town search + geolocation */}
+          <div className={`${styles.formCard} animate-fade-up delay-2`}>
             {submitted ? (
               <div className={styles.successState}>
                 <div className={styles.successIcon}>✓</div>
@@ -516,20 +547,84 @@ export default function Home() {
                   <p>Takes 60 seconds. No app, no spam.</p>
                 </div>
 
-                {/* Postcode */}
+                {/* Town search */}
+                <div className={styles.fieldGroup} ref={townRef}>
+                  <label className={styles.label}>Check prices by town</label>
+                  <div style={{position: 'relative'}}>
+                    <input
+                      type='text'
+                      value={townQuery}
+                      onChange={e => setTownQuery(e.target.value)}
+                      onFocus={() => townFiltered.length > 0 && setTownOpen(true)}
+                      placeholder='Start typing a town or city…'
+                      className={styles.input}
+                      style={{borderColor: townOpen ? 'rgba(0,230,118,0.4)' : undefined}}
+                    />
+                    {townOpen && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                        background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px',
+                        overflow: 'hidden', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                      }}>
+                        {townFiltered.map(t => (
+                          <div
+                            key={t.city}
+                            onMouseDown={() => {
+                              const slug = t.city.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-')
+                              window.location.href = '/town/' + slug
+                            }}
+                            style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              padding: '0.65rem 1rem', cursor: 'pointer', borderBottom: '1px solid #0f1829',
+                              transition: 'background 0.1s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#1e2d4a'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <span style={{fontSize: '0.9rem', color: '#f0f4ff', fontWeight: 500}}>{t.city}</span>
+                            <span style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{t.count} stations</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{fontSize: '0.72rem', color: '#4a5a7a', marginTop: '0.25rem'}}>
+                    Or fill in below to get weekly alerts sent to your inbox
+                  </div>
+                </div>
+
+                {/* Postcode with geolocation */}
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Your postcode</label>
-                  <div className={styles.inputWrapper}>
-                    <input
-                      className={`${styles.input} ${postcodeInfo ? styles.inputValid : ''} ${postcodeError ? styles.inputError : ''}`}
-                      type="text"
-                      placeholder="e.g. NG1 1AA"
-                      value={postcode}
-                      onChange={e => setPostcode(e.target.value.toUpperCase())}
-                      maxLength={8}
-                    />
-                    {postcodeLoading && <span className={styles.inputSpinner} />}
-                    {postcodeInfo && <span className={styles.inputCheck}>✓</span>}
+                  <div style={{display: 'flex', gap: '0.5rem'}}>
+                    <div className={styles.inputWrapper} style={{flex: 1}}>
+                      <input
+                        className={`${styles.input} ${postcodeInfo ? styles.inputValid : ''} ${postcodeError ? styles.inputError : ''}`}
+                        type="text"
+                        placeholder="e.g. AB41 8AR"
+                        value={postcode}
+                        onChange={e => setPostcode(e.target.value.toUpperCase())}
+                        maxLength={8}
+                      />
+                      {postcodeLoading && <span className={styles.inputSpinner} />}
+                      {postcodeInfo && <span className={styles.inputCheck}>✓</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGeolocate}
+                      disabled={locating}
+                      title="Use my location"
+                      style={{
+                        background: '#1a2640', border: '1px solid #1e2d4a', borderRadius: '10px',
+                        padding: '0 0.85rem', color: locating ? '#4a5a7a' : '#8899bb',
+                        fontSize: '1.1rem', cursor: locating ? 'default' : 'pointer',
+                        flexShrink: 0, transition: 'border-color 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!locating) { e.currentTarget.style.borderColor='rgba(0,230,118,0.3)'; e.currentTarget.style.color='#00e676' }}}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor='#1e2d4a'; e.currentTarget.style.color= locating ? '#4a5a7a' : '#8899bb' }}
+                    >
+                      {locating ? '…' : '⌖'}
+                    </button>
                   </div>
                   {postcodeInfo && (
                     <div className={styles.postcodeConfirm}>
