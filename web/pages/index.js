@@ -5,6 +5,36 @@ import styles from '../styles/Home.module.css'
 import StationCard from '../components/StationCard'
 
 export default function Home() {
+  const [townQuery, setTownQuery] = useState('')
+  const [townList, setTownList] = useState([])
+  const [townFiltered, setTownFiltered] = useState([])
+  const [townOpen, setTownOpen] = useState(false)
+  const townRef = useRef(null)
+
+  // Load town list once on mount
+  useEffect(() => {
+    fetch('/api/towns').then(r => r.json()).then(d => setTownList(d || [])).catch(() => {})
+  }, [])
+
+  // Filter as user types
+  useEffect(() => {
+    const q = townQuery.trim().toLowerCase()
+    if (q.length < 2) { setTownFiltered([]); setTownOpen(false); return }
+    const matches = townList
+      .filter(t => t.city.toLowerCase().startsWith(q))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+    setTownFiltered(matches)
+    setTownOpen(matches.length > 0)
+  }, [townQuery, townList])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = e => { if (townRef.current && !townRef.current.contains(e.target)) setTownOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const [postcode, setPostcode] = useState('')
   const [postcodeInfo, setPostcodeInfo] = useState(null)
   const [postcodeError, setPostcodeError] = useState('')
@@ -297,27 +327,75 @@ export default function Home() {
               </div>
             )}
 
-            {/* Supermarket league table */}
-            {priceData?.supermarkets?.length > 0 && (
-              <div style={{marginTop: '1.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '1rem 1.25rem', border: '1px solid rgba(255,255,255,0.08)'}}>
-                <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', marginBottom: '0.75rem'}}>
-                  🛒 Cheapest supermarkets today — avg petrol price
-                </div>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem'}}>
-                  {priceData.supermarkets.filter(s => s.avg_petrol != null).slice(0, 5).map((s, i) => (
-                    <div key={s.brand} style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-                      <span style={{fontSize: '0.75rem', color: '#4a5a7a', width: '1rem', textAlign: 'right'}}>{i + 1}</span>
-                      {s.logo_url && (
-                        <img src={s.logo_url} alt={s.brand} style={{height: '20px', width: '40px', objectFit: 'contain'}}
-                          onError={e => e.target.style.display = 'none'} />
-                      )}
-                      <span style={{flex: 1, fontSize: '0.85rem', color: '#c8d8f0', fontWeight: 500}}>{s.brand}</span>
-                      <span style={{fontSize: '0.95rem', fontWeight: 700, color: '#00e676'}}>{s.avg_petrol.toFixed(1)}p</span>
+            {/* Supermarket league table — hero layout */}
+            {(() => {
+              const supers = (priceData?.supermarkets || [])
+                .filter(s => s.avg_petrol != null && s.brand !== 'Costco')
+              if (!supers.length) return null
+              const hero = supers[0]
+              const rest = supers.slice(1, 4)
+              return (
+                <div style={{marginTop: '1.5rem', border: '1px solid #1e2d4a', borderRadius: '14px', overflow: 'hidden'}}>
+                  <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', padding: '0.75rem 1rem', borderBottom: '1px solid #1e2d4a', background: 'rgba(255,255,255,0.02)'}}>
+                    🛒 Cheapest supermarkets today
+                  </div>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0'}}>
+
+                    {/* Hero — #1 cheapest */}
+                    <div style={{padding: '1.25rem', borderRight: '1px solid #1e2d4a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', background: 'rgba(0,230,118,0.03)'}}>
+                      <div style={{fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00e676'}}>
+                        #1 Cheapest this week
+                      </div>
+                      <div style={{width: '64px', height: '64px', borderRadius: '14px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
+                        {hero.logo_url
+                          ? <img src={hero.logo_url} alt={hero.brand} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
+                          : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '1.2rem'}}>{hero.brand.charAt(0)}</span>
+                        }
+                      </div>
+                      <div style={{fontWeight: 700, fontSize: '0.95rem', color: '#f0f4ff'}}>{hero.brand}</div>
+                      <div style={{display: 'flex', gap: '1rem', marginTop: '0.25rem'}}>
+                        <div style={{textAlign: 'center'}}>
+                          <div style={{fontSize: '0.6rem', color: '#4a5a7a', textTransform: 'uppercase', letterSpacing: '0.06em'}}>Petrol</div>
+                          <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1.1rem', color: '#00e676'}}>{hero.avg_petrol.toFixed(1)}p</div>
+                        </div>
+                        {hero.avg_diesel && (
+                          <div style={{textAlign: 'center'}}>
+                            <div style={{fontSize: '0.6rem', color: '#4a5a7a', textTransform: 'uppercase', letterSpacing: '0.06em'}}>Diesel</div>
+                            <div style={{fontFamily: 'monospace', fontWeight: 800, fontSize: '1.1rem', color: '#64b4ff'}}>{hero.avg_diesel.toFixed(1)}p</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
+
+                    {/* Rest — #2, #3, #4 */}
+                    <div style={{display: 'flex', flexDirection: 'column'}}>
+                      {rest.map((s, i) => (
+                        <div key={s.brand} style={{display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1rem', borderBottom: i < rest.length - 1 ? '1px solid #1e2d4a' : 'none'}}>
+                          <span style={{fontSize: '0.7rem', color: '#4a5a7a', fontWeight: 700, width: '1rem', flexShrink: 0}}>#{i + 2}</span>
+                          <div style={{width: '32px', height: '32px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.2)'}}>
+                            {s.logo_url
+                              ? <img src={s.logo_url} alt={s.brand} style={{width: '80%', height: '80%', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />
+                              : <span style={{fontWeight: 800, color: '#1e2d4a', fontSize: '0.75rem'}}>{s.brand.charAt(0)}</span>
+                            }
+                          </div>
+                          <div style={{flex: 1, minWidth: 0}}>
+                            <div style={{fontSize: '0.82rem', fontWeight: 600, color: '#c8d8f0'}}>{s.brand}</div>
+                            <div style={{display: 'flex', gap: '0.5rem', marginTop: '1px'}}>
+                              <span style={{fontSize: '0.7rem', color: '#00e676', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_petrol.toFixed(1)}p</span>
+                              {s.avg_diesel && <span style={{fontSize: '0.7rem', color: '#64b4ff', fontFamily: 'monospace', fontWeight: 700}}>{s.avg_diesel.toFixed(1)}p</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {rest.length === 0 && (
+                        <div style={{padding: '1rem', color: '#4a5a7a', fontSize: '0.8rem'}}>No data</div>
+                      )}
+                    </div>
+
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <div className={styles.tableFooterCta}>
               <span className={styles.tableFooterCtaDot} />
@@ -345,6 +423,57 @@ export default function Home() {
               <div className={styles.stat}>
                 <span className={styles.statNum}>Weekly</span>
                 <span className={styles.statLabel}>Digest</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Town Price Search */}
+          <div className='animate-fade-up delay-2' style={{marginBottom: '1rem'}} ref={townRef}>
+            <div style={{background: '#111827', border: '1px solid #1e2d4a', borderRadius: '14px', padding: '1.25rem 1.5rem'}}>
+              <div style={{fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4a5a7a', marginBottom: '0.75rem'}}>
+                📍 Check prices in your town
+              </div>
+              <div style={{position: 'relative'}}>
+                <input
+                  type='text'
+                  value={townQuery}
+                  onChange={e => setTownQuery(e.target.value)}
+                  onFocus={() => townFiltered.length > 0 && setTownOpen(true)}
+                  placeholder='Start typing a town or city…'
+                  style={{
+                    width: '100%', background: '#0a0f1e', border: '1px solid',
+                    borderColor: townOpen ? '#00e676' : '#1e2d4a',
+                    borderRadius: '10px', padding: '0.75rem 1rem', color: '#f0f4ff',
+                    fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+                {townOpen && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                    background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px',
+                    overflow: 'hidden', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  }}>
+                    {townFiltered.map(t => (
+                      <div
+                        key={t.city}
+                        onMouseDown={() => {
+                          const slug = t.city.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-')
+                          window.location.href = '/town/' + slug
+                        }}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '0.65rem 1rem', cursor: 'pointer', borderBottom: '1px solid #0f1829',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#1e2d4a'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span style={{fontSize: '0.9rem', color: '#f0f4ff', fontWeight: 500}}>{t.city}</span>
+                        <span style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{t.count} stations</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
