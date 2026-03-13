@@ -1,0 +1,349 @@
+.page {
+  min-height: 100vh;
+  position: relative;
+  background: var(--navy);
+}
+
+.orb1 {
+  position: fixed;
+  top: -200px;
+  right: -100px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.orb2 {
+  position: fixed;
+  bottom: -200px;
+  left: -100px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 74, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.nav {
+  position: relative;
+  z-index: 10;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.4rem;
+}
+
+.logoText {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 70px);
+  padding: 2rem;
+}
+
+.card {
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--navy-border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin-slow 0.8s linear infinite;
+  margin-bottom: 0.5rem;
+}
+
+.iconSuccess {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 230, 118, 0.12);
+  border: 2px solid rgba(0, 230, 118, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--green);
+  margin-bottom: 0.5rem;
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+.iconError {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 107, 74, 0.1);
+  border: 2px solid rgba(255, 107, 74, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--coral);
+  margin-bottom: 0.5rem;
+}
+
+.card h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 360px;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--green);
+  color: var(--navy);
+  text-decoration: none;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.75rem;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: #00f080;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 230, 118, 0.3);
+}
+
+/* Success with data */
+.successWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.successHero {
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.successHero h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.successHero p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.successHero strong {
+  color: var(--text-primary);
+}
+
+/* Prices section */
+.pricesSection {
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 20px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pricesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--navy-border);
+  background: var(--navy-light);
+}
+
+.pricesLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pricesDate {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.stationsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.stationRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+
+.stationRow:last-child {
+  border-bottom: none;
+}
+
+.stationRowBest {
+  background: rgba(0, 230, 118, 0.05);
+  border-left: 3px solid var(--green);
+}
+
+.stationRank {
+  font-size: 1rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.stationInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.stationName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stationMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.stationMeta span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.stationDist {
+  color: var(--text-secondary) !important;
+}
+
+.fuelBadge {
+  background: var(--navy-light);
+  border: 1px solid var(--navy-border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem !important;
+  color: var(--text-muted) !important;
+}
+
+.stationPriceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.stationPrice {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.stationPriceBest {
+  color: var(--green);
+}
+
+.cheapestBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: rgba(0, 230, 118, 0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+}
+
+.priceDiff {
+  font-size: 0.72rem;
+  color: var(--coral);
+  font-weight: 500;
+}
+
+.savingsTip {
+  padding: 1rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: rgba(0, 230, 118, 0.05);
+  border-top: 1px solid rgba(0, 230, 118, 0.1);
+  line-height: 1.6;
+}
+
+.savingsTip strong {
+  color: var(--green);
+}
+
+.noStations {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1.5rem;
+  background: var(--navy-mid);
+  border: 1px solid var(--navy-border);
+  border-radius: 16px;
+  width: 100%;
+}

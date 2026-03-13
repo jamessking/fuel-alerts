@@ -45,8 +45,8 @@ export default async function handler(req, res) {
     // Index rows: country -> fuel_type -> stats
     const idx = {}
     for (const r of rows) {
-      if (!idx[r.country.toLowerCase()]) idx[r.country.toLowerCase()] = {}
-      idx[r.country.toLowerCase()][r.fuel_type] = r
+      if (!idx[r.country]) idx[r.country] = {}
+      idx[r.country][r.fuel_type] = r
     }
 
     // Merge B7 + B7_STANDARD into one diesel figure

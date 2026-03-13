@@ -32,105 +32,124 @@ export async function getLatestSnapshotDate() {
   return date
 }
 
+// Uses pfs_locations via RPC — clean town/country data, no row limit issues
 export async function getAllTowns() {
   const { data, error } = await supabase.rpc('get_towns_with_counts')
   if (error || !data) { console.error('getAllTowns error:', error); return [] }
   return data.map(r => ({
-    city: r.city,
-    slug: toSlug(r.city),
-    count: r.station_count,
+    city:    r.city,
+    slug:    toSlug(r.city),
+    count:   Number(r.station_count),
     country: r.country,
   }))
 }
 
+// Uses pfs_locations via RPC — clean county data
 export async function getAllRegions() {
   const { data, error } = await supabase.rpc('get_regions_with_counts')
   if (error || !data) return []
   return data.map(r => ({
     region: r.county,
-    slug: toSlug(r.county),
-    count: r.station_count,
+    slug:   toSlug(r.county),
+    count:  Number(r.station_count),
   }))
 }
 
-export async function getTownData(cityName) {
-  const today = await getLatestSnapshotDate()
-  const weekAgo  = new Date(new Date(today).getTime() -  7 * 86400000).toISOString().split('T')[0]
+// Uses get_town_stations RPC — server-side join, no row limits, clean location data
+export async function getTownData(townName) {
+  const today   = await getLatestSnapshotDate()
+  const weekAgo = new Date(new Date(today).getTime() - 7 * 86400000).toISOString().split('T')[0]
   const thirtyAgo = new Date(new Date(today).getTime() - 30 * 86400000).toISOString().split('T')[0]
 
-  const { data: stations } = await supabase
-    .from('pfs_stations')
-    .select('node_id, trading_name, brand_name, brand_clean, logo_url, city, county, country, postcode, is_motorway_service_station, is_supermarket_service_station, latitude, longitude, amenities')
-    .ilike('city', cityName)
-    .neq('permanent_closure', true)
-    .neq('is_motorway_service_station', true)
+  // Primary station + price data via RPC
+  const { data: stations, error } = await supabase.rpc('get_town_stations', {
+    p_town:  townName,
+    p_today: today,
+  })
 
+  if (error) console.error('get_town_stations error:', error)
   if (!stations || stations.length === 0) return null
 
   const nodeIds = stations.map(s => s.node_id)
 
-  const [pricesRes, lastWeekRes, historyRes] = await Promise.all([
+  // Week-ago prices and 30-day history still fetched directly (small targeted queries)
+  const [lastWeekRes, historyRes] = await Promise.all([
     supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
-      .in('node_id', nodeIds).eq('snapshot_date', today).in('fuel_type', ['E10', 'B7_STANDARD']),
-    supabase.from('fuel_prices_daily').select('node_id, fuel_type, price')
-      .in('node_id', nodeIds).eq('snapshot_date', weekAgo).in('fuel_type', ['E10', 'B7_STANDARD']),
+      .in('node_id', nodeIds).eq('snapshot_date', weekAgo)
+      .in('fuel_type', ['E10', 'B7_STANDARD']).gt('price', 50),
     supabase.from('fuel_prices_daily').select('node_id, fuel_type, price, snapshot_date')
       .in('node_id', nodeIds).gte('snapshot_date', thirtyAgo).lte('snapshot_date', today)
-      .in('fuel_type', ['E10', 'B7_STANDARD']).order('snapshot_date', { ascending: true }),
+      .in('fuel_type', ['E10', 'B7_STANDARD']).gt('price', 50)
+      .order('snapshot_date', { ascending: true }),
   ])
 
-  const prices = pricesRes.data || []
   const lastWeekPrices = lastWeekRes.data || []
-  const history = historyRes.data || []
+  const history        = historyRes.data  || []
 
-  if (prices.length === 0) return null
+  // Build enriched rows from RPC result
+  const enriched = stations.flatMap(s => {
+    const rows = []
+    if (s.petrol_price != null) rows.push({
+      ...s,
+      fuel_type:    'E10',
+      price:        parseFloat(s.petrol_price),
+      display_name: s.brand_clean || s.trading_name || 'Station',
+    })
+    if (s.diesel_price != null) rows.push({
+      ...s,
+      fuel_type:    'B7_STANDARD',
+      price:        parseFloat(s.diesel_price),
+      display_name: s.brand_clean || s.trading_name || 'Station',
+    })
+    return rows
+  })
 
-  const stationMap = {}
-  for (const s of stations) stationMap[s.node_id] = s
+  if (enriched.length === 0) return null
 
-  const enriched = prices.map(p => ({
-    ...p,
-    ...stationMap[p.node_id],
-    price: parseFloat(p.price),
-    display_name: stationMap[p.node_id]?.brand_clean || stationMap[p.node_id]?.brand_name || stationMap[p.node_id]?.trading_name || 'Station',
-  })).filter(p => p.price > 0)
+  const avg   = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
+  const toP   = (arr, fuel) => arr.filter(p => p.fuel_type === fuel).map(p => p.price)
 
-  const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null
-  const toP = (arr, fuel) => arr.filter(p => p.fuel_type === fuel).map(p => parseFloat(p.price))
-
-  const petrol   = enriched.filter(p => p.fuel_type === 'E10').sort((a, b) => a.price - b.price)
-  const diesel   = enriched.filter(p => p.fuel_type === 'B7_STANDARD').sort((a, b) => a.price - b.price)
+  const petrol  = enriched.filter(p => p.fuel_type === 'E10').sort((a, b) => a.price - b.price)
+  const diesel  = enriched.filter(p => p.fuel_type === 'B7_STANDARD').sort((a, b) => a.price - b.price)
   const allSorted = [...enriched].sort((a, b) => a.price - b.price)
 
-  const avgPetrol          = avg(toP(enriched, 'E10'))
-  const avgDiesel          = avg(toP(enriched, 'B7_STANDARD'))
-  const lastWeekAvgPetrol  = avg(toP(lastWeekPrices, 'E10'))
-  const lastWeekAvgDiesel  = avg(toP(lastWeekPrices, 'B7_STANDARD'))
+  const avgPetrol         = avg(toP(enriched, 'E10'))
+  const avgDiesel         = avg(toP(enriched, 'B7_STANDARD'))
+  const lastWeekAvgPetrol = avg(toP(lastWeekPrices, 'E10'))
+  const lastWeekAvgDiesel = avg(toP(lastWeekPrices, 'B7_STANDARD'))
 
-  const supermarketPetrol  = petrol.filter(p => p.is_supermarket_service_station)
-  const independentPetrol  = petrol.filter(p => !p.is_supermarket_service_station)
+  const supermarketPetrol = petrol.filter(p => p.is_supermarket)
+  const independentPetrol = petrol.filter(p => !p.is_supermarket && !p.is_motorway)
 
+  // Get location context from first station (all same town)
+  const { data: locData } = await supabase
+    .from('pfs_locations')
+    .select('county, country')
+    .eq('node_id', stations[0].node_id)
+    .single()
+
+  // 30-day chart series
   const chartData = {}
   for (const row of history) {
     const d = row.snapshot_date
     if (!chartData[d]) chartData[d] = { date: d, petrol: [], diesel: [] }
-    if (row.fuel_type === 'E10')        chartData[d].petrol.push(parseFloat(row.price))
+    if (row.fuel_type === 'E10')         chartData[d].petrol.push(parseFloat(row.price))
     if (row.fuel_type === 'B7_STANDARD') chartData[d].diesel.push(parseFloat(row.price))
   }
   const chartSeries = Object.values(chartData)
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(d => ({
-      date: d.date,
+      date:   d.date,
       petrol: d.petrol.length ? Math.round(avg(d.petrol) * 10) / 10 : null,
       diesel: d.diesel.length ? Math.round(avg(d.diesel) * 10) / 10 : null,
     }))
 
   return {
-    city: cityName,
-    county: stations[0]?.county || null,
-    country: stations[0]?.country || null,
-    stationCount: stations.length,
-    updatedAt: today,
+    city:              townName,
+    county:            locData?.county  || null,
+    country:           locData?.country || null,
+    stationCount:      stations.length,
+    updatedAt:         today,
     avgPetrol:         avgPetrol  ? Math.round(avgPetrol  * 10) / 10 : null,
     avgDiesel:         avgDiesel  ? Math.round(avgDiesel  * 10) / 10 : null,
     lastWeekAvgPetrol: lastWeekAvgPetrol ? Math.round(lastWeekAvgPetrol * 10) / 10 : null,
@@ -140,7 +159,7 @@ export async function getTownData(cityName) {
     mostExpensivePetrol: petrol[petrol.length - 1] || null,
     cheapestSupermarket: supermarketPetrol[0] || null,
     cheapestIndependent: independentPetrol[0] || null,
-    top5: allSorted.slice(0, 5),
+    top5:              allSorted.slice(0, 5),
     chartSeries,
   }
 }
