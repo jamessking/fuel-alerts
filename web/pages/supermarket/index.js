@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
-import styles from '../styles/BrandPage.module.css'
+import { supabase } from '../../lib/supabase'
+import styles from '../../styles/BrandPage.module.css'
 import indexStyles from '../../styles/SupermarketIndex.module.css'
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
