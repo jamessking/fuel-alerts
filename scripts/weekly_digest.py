@@ -137,7 +137,7 @@ def supabase_get_stations(url: str, key: str) -> list:
         r = requests.get(
             f"{url}/rest/v1/pfs_stations",
             params={
-                "select": "node_id,trading_name,brand_name,brand_clean,postcode,latitude,longitude",
+                "select": "node_id,trading_name,brand_name,brand_clean,logo_url,postcode,latitude,longitude",
                 # Don't filter on closure - handle it in Python instead
             },
             headers={
@@ -387,11 +387,12 @@ BRAND_LOGOS = {
 }
 
 def brand_logo_url(st: dict) -> str:
-    """Return logo URL — uses brand_clean first, then brand_name"""
-    # brand_clean is already normalised e.g. "Tesco", "Shell", "Motor Fuel Group"
+    """Return logo URL — use logo_url from DB first, fall back to BRAND_LOGOS dict"""
+    db_logo = (st.get("logo_url") or "").strip()
+    if db_logo:
+        return db_logo
     clean = (st.get("brand_clean") or "").strip().upper()
     raw   = (st.get("brand_name")  or "").strip().upper()
-
     for brand in (clean, raw):
         if not brand:
             continue
@@ -401,6 +402,15 @@ def brand_logo_url(st: dict) -> str:
             if key in brand or brand in key:
                 return BRAND_LOGOS[key]
     return ""
+
+def town_slug(town: str) -> str:
+    """Convert town name to URL slug matching the website"""
+    import re as _re
+    s = (town or "").lower().strip()
+    s = _re.sub(r"[^a-z0-9\s-]", "", s)
+    s = _re.sub(r"\s+", "-", s)
+    s = _re.sub(r"-+", "-", s)
+    return s
 
 # Colour palette — matches the website
 C_NAVY       = "#0a0f1e"
@@ -848,6 +858,20 @@ def build_email_html(
         share_msg       = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — found it on FuelAlerts. Check if it's cheap near you: {site_url}"
 
     whatsapp_url = f"https://wa.me/?text={_qurlq(share_msg)}"
+    sms_url      = f"sms:?body={_qurlq(share_msg)}"
+
+    # Town page link for hero block
+    if top_stations and top_stations[0].get("town"):
+        _t = esc(top_stations[0]["town"])
+        _s = town_slug(top_stations[0]["town"])
+        _town_link = (
+            f'<div style="margin-top:8px;">'
+'<a href="{site_url}/town/{_s}" '
+'style="font-size:12px;font-weight:700;color:{C_MUTED};text-decoration:none;">'
+'&#128205; See all prices in {_t} &rarr;</a></div>'
+        )
+    else:
+        _town_link = ""
 
     return f"""<!doctype html>
 <html>
@@ -915,6 +939,7 @@ def build_email_html(
                   {esc(top_stations[0].get('postcode') or '') if top_stations else ''} &nbsp;&#183;&nbsp;
                   {top_stations[0]['distance_miles']:.1f} miles away
                 </div>
+                {_town_link}
                 {delta_html}
               </div>
             </td>
@@ -942,8 +967,15 @@ def build_email_html(
                     <a href="{whatsapp_url}"
                        style="display:inline-block;background:{cta_btn_bg};border-radius:10px;
                               padding:11px 20px;text-decoration:none;font-size:13px;
-                              font-weight:800;color:#ffffff;">
-                      &#128241; {cta_btn_label}
+                              font-weight:800;color:#ffffff;margin-bottom:8px;">
+                      &#128242; WhatsApp
+                    </a>
+                    <br/>
+                    <a href="{sms_url}"
+                       style="display:inline-block;background:{C_NAVY_LIGHT};border:1px solid {C_BORDER};border-radius:10px;
+                              padding:8px 20px;text-decoration:none;font-size:12px;
+                              font-weight:700;color:{C_TEXT};">
+                      &#128172; SMS
                     </a>
                   </td>
                 </tr>
@@ -1001,7 +1033,7 @@ def build_email_html(
                 Prices sourced from the UK Government Fuel Finder API &nbsp;&#183;&nbsp; We check daily for the latest prices
               </div>
               <div style="text-align:center;margin-top:12px;">
-                <a href="{site_url}/#update-preferences"
+                <a href="{site_url}/signin"
                    style="font-size:12px;color:{C_MUTED};text-decoration:none;font-weight:700;">
                   &#9998; Update my details
                 </a>
