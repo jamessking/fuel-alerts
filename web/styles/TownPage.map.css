@@ -1,0 +1,36 @@
+/* ── Map section — append to TownPage.module.css ── */
+
+.mapSection {
+  margin-bottom: 2rem;
+}
+
+.mapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.mapTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f0f4ff;
+  margin: 0;
+}
+
+.mapToggleBtn {
+  background: transparent;
+  border: 1px solid #1e2d4a;
+  border-radius: 8px;
+  color: #8899bb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.mapToggleBtn:hover {
+  border-color: #00e676;
+  color: #00e676;
+}

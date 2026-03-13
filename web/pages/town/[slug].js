@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getAllTowns, getTownData, toSlug, fromSlug } from '../../lib/fuel'
 import ShareFuel from '../../components/ShareFuel'
@@ -11,6 +12,7 @@ const fmtDelta = d => d == null ? null : (d > 0 ? `+${d.toFixed(1)}p` : `${d.toF
 const tankSaving = (cheap, expensive) => cheap && expensive ? ((expensive - cheap) / 100 * 55).toFixed(2) : null
 
 export default function TownPage({ data, slug }) {
+  const [mapVisible, setMapVisible] = useState(true)
   if (!data) return (
     <div className={styles.notFound}>
       <h1>No price data found for this area</h1>
@@ -63,6 +65,24 @@ export default function TownPage({ data, slug }) {
         </header>
 
         <main className={styles.main}>
+
+          {/* Map toggle + Leaflet map */}
+          {data.mapStations && data.mapStations.length > 0 && (
+            <section className={styles.mapSection}>
+              <div className={styles.mapHeader}>
+                <h2 className={styles.mapTitle}>Station map</h2>
+                <button
+                  className={styles.mapToggleBtn}
+                  onClick={() => setMapVisible(v => !v)}
+                >
+                  {mapVisible ? 'Hide map' : 'Show map'}
+                </button>
+              </div>
+              {mapVisible && (
+                <TownMap stations={data.mapStations} city={data.city} />
+              )}
+            </section>
+          )}
 
           {/* Price snapshot cards */}
           <section className={styles.snapshotGrid}>
@@ -197,6 +217,137 @@ export default function TownPage({ data, slug }) {
 
         </main>
       </div>
+    </>
+  )
+}
+
+// ── Leaflet map — loaded dynamically (SSR-safe) ──────────────────────────────
+function TownMap({ stations, city }) {
+  const mapRef    = useRef(null)
+  const leafletRef = useRef(null)
+
+  useEffect(() => {
+    if (leafletRef.current) return // already initialised
+
+    // Dynamically load Leaflet CSS + JS (no npm install needed)
+    const link = document.createElement('link')
+    link.rel  = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    document.head.appendChild(link)
+
+    const script = document.createElement('script')
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.onload = () => {
+      const L = window.L
+      if (!mapRef.current || leafletRef.current) return
+
+      // Find centre — average of all station coords
+      const validStations = stations.filter(s => s.lat && s.lon)
+      if (validStations.length === 0) return
+
+      const avgLat = validStations.reduce((s, st) => s + st.lat, 0) / validStations.length
+      const avgLon = validStations.reduce((s, st) => s + st.lon, 0) / validStations.length
+
+      const map = L.map(mapRef.current, { zoomControl: true }).setView([avgLat, avgLon], 13)
+      leafletRef.current = map
+
+      // Dark-compatible OSM tile layer (free, no API key)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19,
+      }).addTo(map)
+
+      // Sort by price to find cheapest
+      const sorted = [...validStations].sort((a, b) => a.price - b.price)
+      const cheapestId = sorted[0]?.node_id
+
+      validStations.forEach(st => {
+        const isCheapest = st.node_id === cheapestId
+        const colour     = isCheapest ? '#00e676' : '#8899bb'
+        const size       = isCheapest ? 14 : 10
+        const priceLabel = st.price ? `${parseFloat(st.price).toFixed(1)}p` : '—'
+        const fuelLabel  = st.fuel_type === 'E10' ? 'Petrol' : 'Diesel'
+        const mapsUrl    = `https://www.google.com/maps?q=${st.lat},${st.lon}`
+        const updatedAt  = st.price_last_updated
+          ? new Date(st.price_last_updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+          : null
+        const changeHtml = st.price_change_ppl != null
+          ? `<div style="margin-top:4px;font-size:11px;color:${st.price_change_ppl < 0 ? '#00e676' : '#ff6b4a'};">
+              ${st.price_change_ppl < 0 ? '▼' : '▲'} ${Math.abs(st.price_change_ppl).toFixed(1)}p vs yesterday
+             </div>`
+          : ''
+
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="
+            width:${size}px;height:${size}px;border-radius:50%;
+            background:${colour};border:2px solid #0a0f1e;
+            box-shadow:0 0 ${isCheapest ? '8px' : '4px'} ${colour}88;
+          "></div>`,
+          iconSize: [size, size],
+          iconAnchor: [size/2, size/2],
+        })
+
+        const marker = L.marker([st.lat, st.lon], { icon })
+        marker.bindPopup(`
+          <div style="font-family:Arial,sans-serif;min-width:180px;background:#111827;color:#f0f4ff;border-radius:10px;overflow:hidden;margin:-14px -20px;">
+            ${isCheapest ? '<div style="background:#00e676;color:#0a0f1e;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;padding:5px 12px;">Cheapest nearby</div>' : ''}
+            <div style="padding:12px 14px;">
+              <div style="font-size:14px;font-weight:800;color:#f0f4ff;margin-bottom:2px;">${st.display_name || st.brand_clean || 'Station'}</div>
+              ${st.postcode ? `<div style="font-size:11px;color:#8899bb;margin-bottom:8px;">${st.postcode}</div>` : ''}
+              <div style="font-size:22px;font-weight:900;color:${colour};letter-spacing:-1px;line-height:1;">${priceLabel}</div>
+              <div style="font-size:10px;color:#4a5a7a;margin-top:2px;">${fuelLabel}</div>
+              ${changeHtml}
+              ${updatedAt ? `<div style="font-size:10px;color:#4a5a7a;margin-top:6px;">Updated ${updatedAt}</div>` : ''}
+              <a href="${mapsUrl}" target="_blank" rel="noopener"
+                 style="display:inline-block;margin-top:10px;background:${colour};color:#0a0f1e;
+                        font-size:12px;font-weight:800;padding:6px 12px;border-radius:6px;text-decoration:none;">
+                Get directions
+              </a>
+            </div>
+          </div>
+        `, {
+          className: 'fuelalerts-popup',
+          maxWidth: 220,
+        })
+        marker.addTo(map)
+      })
+
+      // Auto-fit bounds
+      const bounds = L.latLngBounds(validStations.map(s => [s.lat, s.lon]))
+      map.fitBounds(bounds, { padding: [30, 30] })
+    }
+    document.head.appendChild(script)
+
+    return () => {
+      if (leafletRef.current) {
+        leafletRef.current.remove()
+        leafletRef.current = null
+      }
+    }
+  }, [stations])
+
+  return (
+    <>
+      <style>{`
+        .fuelalerts-popup .leaflet-popup-content-wrapper {
+          background: #111827 !important;
+          border: 1px solid #1e2d4a !important;
+          border-radius: 10px !important;
+          padding: 0 !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+        }
+        .fuelalerts-popup .leaflet-popup-tip {
+          background: #111827 !important;
+        }
+        .fuelalerts-popup .leaflet-popup-content {
+          margin: 0 !important;
+        }
+        .leaflet-container {
+          background: #0a0f1e !important;
+        }
+      `}</style>
+      <div ref={mapRef} style={{ height: '400px', width: '100%', borderRadius: '14px', overflow: 'hidden', border: '1px solid #1e2d4a' }} />
     </>
   )
 }

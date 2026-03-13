@@ -161,5 +161,27 @@ export async function getTownData(townName) {
     cheapestIndependent: independentPetrol[0] || null,
     top5:              allSorted.slice(0, 5),
     chartSeries,
+    // All stations with coords for the map — deduplicated by node_id (cheapest price per station)
+    mapStations: Object.values(
+      enriched.reduce((acc, s) => {
+        if (!s.latitude && !s.longitude) return acc
+        const existing = acc[s.node_id]
+        if (!existing || s.price < existing.price) {
+          acc[s.node_id] = {
+            node_id:      s.node_id,
+            display_name: s.display_name,
+            brand_clean:  s.brand_clean,
+            postcode:     s.postcode,
+            lat:          parseFloat(s.latitude),
+            lon:          parseFloat(s.longitude),
+            price:        s.price,
+            fuel_type:    s.fuel_type,
+            price_last_updated:       s.price_last_updated || null,
+            price_change_effective_timestamp: s.price_change_effective_timestamp || null,
+          }
+        }
+        return acc
+      }, {})
+    ),
   }
 }
