@@ -212,7 +212,10 @@ export default function Home() {
             <span className={styles.logoMark}>⛽</span>
             <span className={styles.logoText}>FuelAlerts</span>
           </div>
-          <div className={styles.navBadge}>No app needed</div>
+          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+            <Link href="/signin" style={{fontSize: '0.85rem', color: '#8899bb', textDecoration: 'none', fontWeight: 600}}>Sign in</Link>
+            <div className={styles.navBadge}>No app needed</div>
+          </div>
         </nav>
 
         <section className={styles.hero}>
@@ -266,7 +269,7 @@ export default function Home() {
                         const deltaStr = fmtDelta(delta)
                         const link = countryLinks[row.label]
                         const regionCell = link
-                          ? <Link href={link} className={styles.priceTableRegionLink}>{row.label}</Link>
+                          ? <Link href={link} className={styles.priceTableRegionLink} style={{color: "#f0f4ff", fontWeight: 600, textDecoration: "none", fontSize: "0.95rem"}}>{row.label}</Link>
                           : <span>{row.label}</span>
                         return (
                           <div key={row.key} className={styles.priceTableRow}>
@@ -291,6 +294,28 @@ export default function Home() {
                     </div>
                   )
                 })()}
+              </div>
+            )}
+
+            {/* Supermarket league table */}
+            {priceData?.supermarkets?.length > 0 && (
+              <div style={{marginTop: '1.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '1rem 1.25rem', border: '1px solid rgba(255,255,255,0.08)'}}>
+                <div style={{fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#4a5a7a', marginBottom: '0.75rem'}}>
+                  🛒 Cheapest supermarkets today — avg petrol price
+                </div>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem'}}>
+                  {priceData.supermarkets.filter(s => s.avg_petrol != null).slice(0, 5).map((s, i) => (
+                    <div key={s.brand} style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                      <span style={{fontSize: '0.75rem', color: '#4a5a7a', width: '1rem', textAlign: 'right'}}>{i + 1}</span>
+                      {s.logo_url && (
+                        <img src={s.logo_url} alt={s.brand} style={{height: '20px', width: '40px', objectFit: 'contain'}}
+                          onError={e => e.target.style.display = 'none'} />
+                      )}
+                      <span style={{flex: 1, fontSize: '0.85rem', color: '#c8d8f0', fontWeight: 500}}>{s.brand}</span>
+                      <span style={{fontSize: '0.95rem', fontWeight: 700, color: '#00e676'}}>{s.avg_petrol.toFixed(1)}p</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
