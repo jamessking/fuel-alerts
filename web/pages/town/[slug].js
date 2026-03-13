@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { getAllTowns, getTownData, toSlug, fromSlug } from '../../lib/fuel'
 import ShareFuel from '../../components/ShareFuel'
 import styles from '../../styles/TownPage.module.css'
+import BrandLogo from '../../components/BrandLogo'
 
 const fmt = p => p != null ? `${parseFloat(p).toFixed(1)}p` : '—'
 const fmtDelta = d => d == null ? null : (d > 0 ? `+${d.toFixed(1)}p` : `${d.toFixed(1)}p`)
@@ -138,10 +139,7 @@ export default function TownPage({ data, slug }) {
               {data.top5.map((s, i) => (
                 <div key={s.node_id} className={`${styles.stationRow} ${i === 0 ? styles.stationRowBest : ''}`}>
                   <div className={styles.stationRank}>{i === 0 ? '🏆' : `#${i + 1}`}</div>
-                  {s.logo_url && (
-                    <img src={s.logo_url} alt="" className={styles.stationLogo}
-                      onError={e => e.target.style.display = 'none'} />
-                  )}
+                  <BrandLogo logoUrl={s.logo_url} brandName={s.display_name} size="sm" />
                   <div className={styles.stationInfo}>
                     <div className={styles.stationName}>{s.display_name}</div>
                     <div className={styles.stationMeta}>

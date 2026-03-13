@@ -48,7 +48,7 @@
 .stationRow:hover { border-color: rgba(0,230,118,0.2); }
 .stationRowBest { border-color: rgba(0,230,118,0.35); background: rgba(0,230,118,0.04); }
 .stationRank { font-size: 1rem; width: 28px; flex-shrink: 0; text-align: center; }
-.stationLogo { width: 36px; height: 24px; object-fit: contain; flex-shrink: 0; }
+.stationLogo { display: none; } /* replaced by BrandLogo */
 .stationInfo { flex: 1; min-width: 0; }
 .stationName { font-size: 0.9rem; font-weight: 600; color: #f0f4ff; }
 .stationMeta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 2px; }

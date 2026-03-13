@@ -364,7 +364,7 @@ export default function AccountPage() {
                   const isFav = favIds.has(s.node_id)
                   return (
                     <div key={s.node_id} style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid #1e2d4a'}}>
-                      {s.logo_url && <img src={s.logo_url} alt="" style={{height: '20px', width: '40px', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />}
+                      <BrandLogo logoUrl={s.logo_url} brandName={s.display_name} size="sm" />
                       <div style={{flex: 1}}>
                         <div style={{fontSize: '0.9rem', fontWeight: 600}}>{s.display_name}</div>
                         <div style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{s.postcode}</div>
@@ -386,7 +386,7 @@ export default function AccountPage() {
             <Section title="★ Favourite stations">
               {favourites.map(s => (
                 <div key={s.node_id} style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid #1e2d4a'}}>
-                  {s.logo_url && <img src={s.logo_url} alt="" style={{height: '20px', width: '40px', objectFit: 'contain'}} onError={e => e.target.style.display='none'} />}
+                  <BrandLogo logoUrl={s.logo_url} brandName={s.display_name} size="sm" />
                   <div style={{flex: 1}}>
                     <div style={{fontSize: '0.9rem', fontWeight: 600}}>{s.brand_clean || s.trading_name}</div>
                     <div style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{s.postcode}</div>
