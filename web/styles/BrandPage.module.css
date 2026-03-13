@@ -214,6 +214,24 @@
   gap: 0.5rem;
 }
 
+.regionRowLink {
+  text-decoration: none;
+  display: block;
+}
+.regionRowLink:hover .regionRow {
+  border-color: rgba(0,230,118,0.3);
+  background: rgba(0,230,118,0.04);
+}
+
+.townLink {
+  color: #00e676;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.75rem;
+  transition: opacity 0.15s;
+}
+.townLink:hover { opacity: 0.8; text-decoration: underline; }
+
 .regionRow {
   display: grid;
   grid-template-columns: 1.5fr 80px 1fr 60px;

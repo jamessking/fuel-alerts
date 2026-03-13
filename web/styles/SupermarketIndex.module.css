@@ -1,0 +1,542 @@
+/* SupermarketIndex.module.css */
+
+.page {
+  min-height: 100vh;
+  background: #0a0f1e;
+  font-family: 'DM Sans', Arial, sans-serif;
+  color: #f0f4ff;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid #1e2d4a;
+  background: rgba(10,15,30,0.95);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #f0f4ff;
+  text-decoration: none;
+}
+
+.navBack {
+  font-size: 0.85rem;
+  color: #8899bb;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.navBack:hover { color: #00e676; }
+
+.inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+}
+
+/* Header */
+.header {
+  margin-bottom: 3rem;
+}
+
+.sectionLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4a5a7a;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #f0f4ff;
+  margin: 0 0 0.75rem;
+}
+
+.sub {
+  font-size: 1rem;
+  color: #8899bb;
+  max-width: 600px;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+
+.cheapestBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0,230,118,0.07);
+  border: 1px solid rgba(0,230,118,0.2);
+  border-radius: 12px;
+  padding: 0.7rem 1.25rem;
+}
+
+.cheapestLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a5a7a;
+}
+
+.cheapestBrand {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f0f4ff;
+}
+
+.cheapestPrice {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #00e676;
+  font-family: monospace;
+}
+
+.cheapestSub {
+  font-size: 0.72rem;
+  color: #8899bb;
+}
+
+/* Main brand grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: #111827;
+  border: 1px solid #1e2d4a;
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: rgba(0,230,118,0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.cardRank {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #4a5a7a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.logoWrap {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.logoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logoFallback {
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #1e2d4a;
+}
+
+.cardName {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f0f4ff;
+  letter-spacing: -0.01em;
+}
+
+.cheapestTag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #00e676;
+  background: rgba(0,230,118,0.1);
+  border: 1px solid rgba(0,230,118,0.25);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.priceRow {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-end;
+}
+
+.priceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.priceLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a5a7a;
+}
+
+.priceValue {
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-family: monospace;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.priceValueSm {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8899bb;
+  line-height: 1;
+}
+
+.cardDesc {
+  font-size: 0.82rem;
+  color: #8899bb;
+  line-height: 1.55;
+  margin: 0;
+  flex: 1;
+}
+
+.cardCta {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #00e676;
+  margin-top: auto;
+}
+
+/* Costco card */
+.costcoCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: rgba(255,179,0,0.05);
+  border: 1px solid rgba(255,179,0,0.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-decoration: none;
+  margin-bottom: 3rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  flex-wrap: wrap;
+}
+
+.costcoCard:hover {
+  border-color: rgba(255,179,0,0.4);
+  box-shadow: 0 4px 20px rgba(255,179,0,0.08);
+}
+
+.costcoLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.costcoName {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f0f4ff;
+}
+
+.membersOnlyBadge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffb300;
+  background: rgba(255,179,0,0.12);
+  border: 1px solid rgba(255,179,0,0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.membersOnlyBadgeSm {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffb300;
+  background: rgba(255,179,0,0.1);
+  border: 1px solid rgba(255,179,0,0.25);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 6px;
+}
+
+.costcoDesc {
+  font-size: 0.85rem;
+  color: #8899bb;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 480px;
+}
+
+.costcoRight {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.costcoCta {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffb300;
+  white-space: nowrap;
+}
+
+/* Comparison table */
+.compareSection {
+  margin-bottom: 3rem;
+}
+
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f0f4ff;
+  margin-bottom: 1.25rem;
+}
+
+.tableWrap {
+  background: #111827;
+  border: 1px solid #1e2d4a;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table thead tr {
+  border-bottom: 1px solid #1e2d4a;
+}
+
+.table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a5a7a;
+}
+
+.table td {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid rgba(30,45,74,0.6);
+  color: #8899bb;
+  vertical-align: middle;
+}
+
+.trBest td {
+  background: rgba(0,230,118,0.03);
+}
+
+.tdBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #f0f4ff;
+  font-weight: 600;
+}
+
+.tdLogo {
+  width: 28px;
+  height: 28px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.tdPrice {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.tdMuted {
+  color: #4a5a7a;
+  font-size: 0.82rem;
+}
+
+.tdLink {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #00e676;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.tdLink:hover { text-decoration: underline; }
+
+.updatedNote {
+  font-size: 0.72rem;
+  color: #4a5a7a;
+  margin-top: 0.75rem;
+}
+
+/* SEO section */
+.seoSection {
+  margin-bottom: 3rem;
+}
+
+.seoCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.seoCols p {
+  font-size: 0.9rem;
+  color: #8899bb;
+  line-height: 1.7;
+  margin: 0 0 1rem;
+}
+
+/* CTA */
+.ctaBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: rgba(0,230,118,0.06);
+  border: 1px solid rgba(0,230,118,0.2);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  flex-wrap: wrap;
+}
+
+.ctaBanner h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f0f4ff;
+  margin: 0 0 0.3rem;
+}
+
+.ctaBanner p {
+  font-size: 0.85rem;
+  color: #8899bb;
+  margin: 0;
+}
+
+.ctaBtn {
+  background: #00e676;
+  color: #0a0f1e;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.75rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.ctaBtn:hover {
+  background: #00f080;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,230,118,0.25);
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid #1e2d4a;
+  padding: 2rem;
+}
+
+.footerInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footerLogo {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #8899bb;
+}
+
+.footerText {
+  font-size: 0.75rem;
+  color: #4a5a7a;
+}
+
+.footerLinks {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.footerLinks a {
+  font-size: 0.78rem;
+  color: #4a5a7a;
+  text-decoration: none;
+}
+.footerLinks a:hover { color: #8899bb; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .seoCols { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .inner { padding: 2rem 1rem 3rem; }
+  .grid { grid-template-columns: 1fr; }
+  .costcoCard { flex-direction: column; }
+  .costcoRight { width: 100%; }
+  .ctaBanner { flex-direction: column; align-items: flex-start; }
+  .table th:nth-child(4), .table th:nth-child(5),
+  .table td:nth-child(4), .table td:nth-child(5) { display: none; }
+}

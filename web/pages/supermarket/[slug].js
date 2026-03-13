@@ -31,13 +31,13 @@ export default function SupermarketPage({ brand, stats, trend, slug }) {
 
   const byRegion = {}
   for (const s of stats) {
-    if (!s.region) continue
-    if (!byRegion[s.region]) byRegion[s.region] = []
-    byRegion[s.region].push(parseFloat(s.price))
+    const key = s.county || s.country || 'Other'
+    if (!byRegion[key]) byRegion[key] = []
+    byRegion[key].push(parseFloat(s.price))
   }
   const regionRows = Object.entries(byRegion)
-    .map(([region, prices]) => ({
-      region,
+    .map(([county, prices]) => ({
+      county,
       avg: prices.reduce((a, b) => a + b, 0) / prices.length,
       count: prices.length,
     }))
@@ -161,15 +161,17 @@ export default function SupermarketPage({ brand, stats, trend, slug }) {
                 <h2 className={styles.sectionTitle}>Average price by region</h2>
                 <div className={styles.regionList}>
                   {regionRows.map(r => (
-                    <div key={r.region} className={styles.regionRow}>
-                      <div className={styles.regionName}>{r.region}</div>
-                      <div className={styles.regionCount}>{r.count} forecourts</div>
-                      <div className={styles.regionBar}>
-                        <div className={styles.regionBarFill}
-                          style={{ width: `${Math.min(100, ((r.avg - regionRows[regionRows.length-1].avg) / Math.max(regionRows[0].avg - regionRows[regionRows.length-1].avg, 1)) * 100)}%` }} />
+                    <a key={r.county} href={`/region/${toSlug(r.county)}`} className={styles.regionRowLink}>
+                      <div className={styles.regionRow}>
+                        <div className={styles.regionName}>{r.county}</div>
+                        <div className={styles.regionCount}>{r.count} forecourts</div>
+                        <div className={styles.regionBar}>
+                          <div className={styles.regionBarFill}
+                            style={{ width: `${Math.min(100, ((r.avg - regionRows[regionRows.length-1].avg) / Math.max(regionRows[0].avg - regionRows[regionRows.length-1].avg, 1)) * 100)}%` }} />
+                        </div>
+                        <div className={styles.regionPrice}>{fmt(Math.round(r.avg * 10) / 10)}</div>
                       </div>
-                      <div className={styles.regionPrice}>{fmt(Math.round(r.avg * 10) / 10)}</div>
-                    </div>
+                    </a>
                   ))}
                 </div>
               </section>
@@ -182,6 +184,7 @@ export default function SupermarketPage({ brand, stats, trend, slug }) {
                   const mapsUrl = s.latitude && s.longitude
                     ? `https://www.google.com/maps?q=${s.latitude},${s.longitude}`
                     : `https://www.google.com/maps?q=${encodeURIComponent((s.trading_name || brand) + ' ' + (s.postcode || ''))}`
+                  const townUrl = s.city ? `/town/${toSlug(s.city)}` : null
                   return (
                     <div key={s.node_id} className={`${styles.stationRow} ${i === 0 ? styles.stationRowBest : ''}`}>
                       <div className={styles.stationRank}>
@@ -191,7 +194,10 @@ export default function SupermarketPage({ brand, stats, trend, slug }) {
                         <div className={styles.stationName}>{s.trading_name || brand}</div>
                         <div className={styles.stationMeta}>
                           {s.postcode && <span>{s.postcode}</span>}
-                          {s.region && <span>{s.region}</span>}
+                          {s.city && townUrl
+                            ? <a href={townUrl} className={styles.townLink}>{s.city}</a>
+                            : s.county && <span>{s.county}</span>
+                          }
                         </div>
                       </div>
                       <div className={styles.stationRight}>
