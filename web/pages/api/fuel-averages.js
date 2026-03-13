@@ -42,11 +42,12 @@ export default async function handler(req, res) {
 
     if (error) throw error
 
-    // Index rows: country -> fuel_type -> stats
+    // Index rows: country (lowercased) -> fuel_type -> stats
     const idx = {}
     for (const r of rows) {
-      if (!idx[r.country]) idx[r.country] = {}
-      idx[r.country][r.fuel_type] = r
+      const key = (r.country || '').toLowerCase()
+      if (!idx[key]) idx[key] = {}
+      idx[key][r.fuel_type] = r
     }
 
     // Merge B7 + B7_STANDARD into one diesel figure
@@ -103,14 +104,14 @@ export default async function handler(req, res) {
     for (const r of (superRowsDiesel || [])) dieselByBrand[r.brand_clean] = r
 
     const supermarkets = (superRows || []).map(r => ({
-      brand:       r.brand_clean,
-      avg_petrol:  r.avg_price != null ? parseFloat(r.avg_price) : null,
-      avg_diesel:  dieselByBrand[r.brand_clean]?.avg_price != null ? parseFloat(dieselByBrand[r.brand_clean].avg_price) : null,
+      brand:         r.brand_clean,
+      avg_petrol:    r.avg_price != null ? parseFloat(r.avg_price) : null,
+      avg_diesel:    dieselByBrand[r.brand_clean]?.avg_price != null ? parseFloat(dieselByBrand[r.brand_clean].avg_price) : null,
       station_count: r.station_count,
-      logo_url:    r.logo_url || null,
+      logo_url:      r.logo_url || null,
     }))
 
-    // Brand averages (non-supermarket)
+    // Brand averages (non-supermarket forecourts)
     const { data: brandRows } = await supabase.rpc('get_all_brand_averages', { p_fuel_type: 'E10', p_min_stations: 10 })
     const brands = (brandRows || []).map(r => ({
       brand_clean:   r.brand_clean,
