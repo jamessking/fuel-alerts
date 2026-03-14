@@ -220,6 +220,11 @@ export default function Home() {
       setSubmitted(true)
       if (data.referral_code) setMyReferralCode(data.referral_code)
 
+      // Scroll to top of form card so success state is visible on mobile
+      setTimeout(() => {
+        document.querySelector('[class*="formCard"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+
       // Load nearby stations for the success state
       setNearbyLoading(true)
       try {
@@ -541,7 +546,6 @@ export default function Home() {
                 <h3>You're on the list!</h3>
                 <p>Check your inbox to confirm your email, and see the latest prices in your area today. Your first regular FuelAlert arrives Monday.  If you need to change and details there is a link in the message.</p>
 
-                {/* Referral share */}
                 {myReferralCode && (
                   <div style={{
                     width:'100%', marginTop:'1rem', padding:'1rem',
