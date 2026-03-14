@@ -764,6 +764,52 @@ export default function Home() {
                 <p className={styles.formFootnote}>
                   Free forever. Unsubscribe anytime. No app required.
                 </p>
+              </form>
+            )}
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className={styles.howItWorks}>
+          <div className={styles.sectionInner}>
+            <div className={styles.sectionLabel}>How it works</div>
+            <h2 className={styles.sectionTitle}>Prices sent to you.<br />Not the other way around.</h2>
+            <div className={styles.stepsPhoto}>
+              <img src='https://images.unsplash.com/photo-1596568960638-96244807ed52?q=80&w=1548&auto=format&fit=crop' alt='Fuel station' />
+              <div className={styles.stepsPhotoOverlay} />
+            </div>
+            <div className={styles.steps}>
+              {[
+                { n: '01', title: 'Enter your postcode', desc: "Tell us where you are and how far you're willing to travel for fuel." },
+                { n: '02', title: 'We watch the prices', desc: 'Our system pulls live data from 7,150+ stations daily, direct from government sources.' },
+                { n: '03', title: 'You get an alert', desc: 'Weekly digest lands in your inbox showing the top 5 cheapest nearby stations — with exact prices.' },
+              ].map(step => (
+                <div key={step.n} className={styles.step}>
+                  <div className={styles.stepNum}>{step.n}</div>
+                  <h3 className={styles.stepTitle}>{step.title}</h3>
+                  <p className={styles.stepDesc}>{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Why FuelAlerts */}
+        <section className={styles.why}>
+          <div className={styles.sectionInner}>
+            <div className={styles.sectionLabel}>Why FuelAlerts</div>
+            <h2 className={styles.sectionTitle}>Other apps make you check.<br />We just <span className={styles.accent}>tell you.</span></h2>
+            <div className={styles.compareGrid}>
+              <div className={styles.compareCol}>
+                <div className={styles.compareHeader}>
+                  <span className={styles.compareLabelBad}>Other fuel apps</span>
+                </div>
+                {['Open the app to check', 'Remember to look before each fill-up', 'Download required', 'Cluttered with offers & ads', 'No savings calculation'].map(item => (
+                  <div key={item} className={styles.compareItem}>
+                    <span className={styles.crossIcon}>✕</span> {item}
+                  </div>
+                ))}
+              </div>
               <div className={`${styles.compareCol} ${styles.compareColGood}`}>
                 <div className={styles.compareHeader}>
                   <span className={styles.compareLabelGood}>FuelAlerts</span>
