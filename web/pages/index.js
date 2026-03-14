@@ -564,150 +564,17 @@ export default function Home() {
             ) : (
               <form onSubmit={handleSubmit} className={styles.form}>
                 <div className={styles.formHeader}>
-                  <h2>Start saving today</h2>
-                  <p>Takes 60 seconds. No app, no spam.</p>
+                  <h2>See the cheapest fuel near you</h2>
+                  <p>Free weekly email. No app, no spam.</p>
                 </div>
 
-                {/* Town search */}
-                <div className={styles.fieldGroup} ref={townRef}>
-                  <label className={styles.label}>Check prices by town</label>
-                  <div style={{position: 'relative'}}>
-                    <input
-                      type='text'
-                      value={townQuery}
-                      onChange={e => setTownQuery(e.target.value)}
-                      onFocus={() => townFiltered.length > 0 && setTownOpen(true)}
-                      placeholder='Start typing a town or city…'
-                      className={styles.input}
-                      style={{borderColor: townOpen ? 'rgba(0,230,118,0.4)' : undefined}}
-                    />
-                    {townOpen && (
-                      <div style={{
-                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                        background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px',
-                        overflow: 'hidden', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                      }}>
-                        {townFiltered.map(t => (
-                          <div
-                            key={t.city}
-                            onMouseDown={() => {
-                              const slug = t.city.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-')
-                              window.location.href = '/town/' + slug
-                            }}
-                            style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              padding: '0.65rem 1rem', cursor: 'pointer', borderBottom: '1px solid #0f1829',
-                              transition: 'background 0.1s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#1e2d4a'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          >
-                            <span style={{fontSize: '0.9rem', color: '#f0f4ff', fontWeight: 500}}>{t.city}</span>
-                            <span style={{fontSize: '0.75rem', color: '#4a5a7a'}}>{t.count} stations</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{fontSize: '0.72rem', color: '#4a5a7a', marginTop: '0.25rem'}}>
-                    Or fill in below to get weekly alerts sent to your inbox
-                  </div>
-                </div>
-
-                {/* Postcode with geolocation */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Your postcode</label>
-                  <div style={{display: 'flex', gap: '0.5rem'}}>
-                    <div className={styles.inputWrapper} style={{flex: 1}}>
-                      <input
-                        className={`${styles.input} ${postcodeInfo ? styles.inputValid : ''} ${postcodeError ? styles.inputError : ''}`}
-                        type="text"
-                        placeholder="e.g. AB41 8AR"
-                        value={postcode}
-                        onChange={e => setPostcode(e.target.value.toUpperCase())}
-                        maxLength={8}
-                      />
-                      {postcodeLoading && <span className={styles.inputSpinner} />}
-                      {postcodeInfo && <span className={styles.inputCheck}>✓</span>}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleGeolocate}
-                      disabled={locating}
-                      title="Use my location"
-                      style={{
-                        background: '#1a2640', border: '1px solid #1e2d4a', borderRadius: '10px',
-                        padding: '0 0.85rem', color: locating ? '#4a5a7a' : '#8899bb',
-                        fontSize: '1.1rem', cursor: locating ? 'default' : 'pointer',
-                        flexShrink: 0, transition: 'border-color 0.15s, color 0.15s',
-                      }}
-                      onMouseEnter={e => { if (!locating) { e.currentTarget.style.borderColor='rgba(0,230,118,0.3)'; e.currentTarget.style.color='#00e676' }}}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor='#1e2d4a'; e.currentTarget.style.color= locating ? '#4a5a7a' : '#8899bb' }}
-                    >
-                      {locating ? '…' : '⌖'}
-                    </button>
-                  </div>
-                  {postcodeInfo && (
-                    <div className={styles.postcodeConfirm}>
-                      📍 {postcodeInfo.town}
-                    </div>
-                  )}
-                  {postcodeError && <div className={styles.fieldError}>{postcodeError}</div>}
-                </div>
-
-                {/* Fuel Type */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Fuel type</label>
-                  <div className={styles.fuelButtons}>
-                    {[
-                      { value: 'E10', label: '⛽ Unleaded' },
-                      { value: 'E5',  label: '⛽ Super Unleaded' },
-                      { value: 'B7',  label: '🛢 Diesel' },
-                      { value: 'SDV', label: '🛢 Super Diesel' },
-                    ].map(f => (
-                      <button
-                        key={f.value}
-                        type="button"
-                        className={`${styles.fuelBtn} ${fuelType === f.value ? styles.fuelBtnActive : ''}`}
-                        onClick={() => setFuelType(f.value)}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Radius */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Search radius
-                    {postcodeInfo && (
-                      <span className={styles.stationCount}>
-                        {stationCountLoading ? ' · checking...' : stationCount !== null ? ` · ~${stationCount} stations nearby` : ''}
-                      </span>
-                    )}
-                  </label>
-                  <div className={styles.radiusButtons}>
-                    {['2', '5', '10', '20'].map(r => (
-                      <button
-                        key={r}
-                        type="button"
-                        className={`${styles.radiusBtn} ${radius === r ? styles.radiusBtnActive : ''}`}
-                        onClick={() => setRadius(r)}
-                      >
-                        {r} mi
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Vehicle */}
+                {/* Step 1: Your car — sets fuel type automatically */}
                 <div className={styles.vehicleSection}>
                   <div className={styles.vehicleSectionHeader}>
                     <span className={styles.vehicleSectionIcon}>🚗</span>
                     <div>
-                      <div className={styles.vehicleSectionTitle}>Add your vehicle <span className={styles.vehicleSectionBadge}>Recommended</span></div>
-                      <div className={styles.vehicleSectionSub}>Auto-selects fuel type · unlocks savings estimates</div>
+                      <div className={styles.vehicleSectionTitle}>Your car <span className={styles.vehicleSectionBadge}>Sets fuel type automatically</span></div>
+                      <div className={styles.vehicleSectionSub}>Enter your reg to personalise your alerts and see your MOT status</div>
                     </div>
                   </div>
                   <div className={styles.regRow}>
@@ -754,40 +621,134 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                  <div className={styles.vehicleFields}>
-                    <div className={styles.miniField}>
-                      <label className={styles.labelSmall}>Annual miles</label>
-                      <div className={styles.stepperRow}>
-                        <button type="button" className={styles.stepperBtn}
-                          onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000)))}>−</button>
-                        <span className={styles.stepperValue}>{Number(annualMiles).toLocaleString()}</span>
-                        <button type="button" className={styles.stepperBtn}
-                          onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
-                      </div>
-                    </div>
-                    <div className={styles.miniField}>
-                      <label className={styles.labelSmall}>MPG</label>
-                      <input className={styles.input} type="number" value={mpg} onChange={e => setMpg(e.target.value)} />
-                    </div>
-                    <div className={styles.miniField}>
-                      <label className={styles.labelSmall}>Tank (L)</label>
-                      <input className={styles.input} type="number" value={tankLitres} onChange={e => setTankLitres(e.target.value)} />
-                    </div>
-                  </div>
-                  {saving && (
-                    <div className={styles.savingPreview}>
-                      💰 Choosing the cheapest station could save you <strong>~£{saving}/yr</strong>
+                  {!regInfo && (
+                    <div style={{fontSize:'0.75rem',color:'#4a5a7a',marginTop:'0.5rem'}}>
+                      No reg? No problem — <span style={{color:'#8899bb'}}>skip this step</span>
                     </div>
                   )}
                 </div>
 
-                {/* Email */}
+                {/* Step 2: Where you fill up */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Email address</label>
+                  <label className={styles.label}>
+                    Where do you fill up?
+                    {postcodeInfo && stationCount !== null && (
+                      <span className={styles.stationCount}> · {stationCountLoading ? 'checking...' : `~${stationCount} stations nearby`}</span>
+                    )}
+                  </label>
+                  <div style={{display: 'flex', gap: '0.5rem'}}>
+                    <div className={styles.inputWrapper} style={{flex: 1}}>
+                      <input
+                        className={`${styles.input} ${postcodeInfo ? styles.inputValid : ''} ${postcodeError ? styles.inputError : ''}`}
+                        type="text"
+                        placeholder="Enter your postcode"
+                        value={postcode}
+                        onChange={e => setPostcode(e.target.value.toUpperCase())}
+                        maxLength={8}
+                      />
+                      {postcodeLoading && <span className={styles.inputSpinner} />}
+                      {postcodeInfo && <span className={styles.inputCheck}>✓</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGeolocate}
+                      disabled={locating}
+                      title="Use my location"
+                      style={{
+                        background: '#1a2640', border: '1px solid #1e2d4a', borderRadius: '10px',
+                        padding: '0 0.85rem', color: locating ? '#4a5a7a' : '#8899bb',
+                        fontSize: '1.1rem', cursor: locating ? 'default' : 'pointer',
+                        flexShrink: 0, transition: 'border-color 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!locating) { e.currentTarget.style.borderColor='rgba(0,230,118,0.3)'; e.currentTarget.style.color='#00e676' }}}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor='#1e2d4a'; e.currentTarget.style.color= locating ? '#4a5a7a' : '#8899bb' }}
+                    >
+                      {locating ? '…' : '⌖'}
+                    </button>
+                  </div>
+                  {postcodeInfo && (
+                    <div className={styles.postcodeConfirm}>
+                      📍 {postcodeInfo.town}
+                    </div>
+                  )}
+                  {postcodeError && <div className={styles.fieldError}>{postcodeError}</div>}
+                  <div className={styles.radiusButtons} style={{marginTop:'0.6rem'}}>
+                    {['2', '5', '10', '20'].map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        className={`${styles.radiusBtn} ${radius === r ? styles.radiusBtnActive : ''}`}
+                        onClick={() => setRadius(r)}
+                      >
+                        {r} mi
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 3: Fuel type — only shown if reg didn't auto-set it */}
+                {!regInfo && (
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.label}>Fuel type</label>
+                    <div className={styles.fuelButtons}>
+                      {[
+                        { value: 'E10', label: '⛽ Unleaded' },
+                        { value: 'E5',  label: '⛽ Super Unleaded' },
+                        { value: 'B7',  label: '🛢 Diesel' },
+                        { value: 'SDV', label: '🛢 Super Diesel' },
+                      ].map(f => (
+                        <button
+                          key={f.value}
+                          type="button"
+                          className={`${styles.fuelBtn} ${fuelType === f.value ? styles.fuelBtnActive : ''}`}
+                          onClick={() => setFuelType(f.value)}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {regInfo && fuelType && (
+                  <div style={{fontSize:'0.8rem',color:'#4ade80',marginBottom:'0.5rem',marginTop:'-0.25rem'}}>
+                    ⛽ Fuel type set to <strong>{fuelType === 'E10' ? 'Unleaded' : fuelType === 'B7' ? 'Diesel' : fuelType === 'E5' ? 'Super Unleaded' : 'Super Diesel'}</strong> from your reg
+                  </div>
+                )}
+
+                {/* Savings estimate + annual miles */}
+                <div className={styles.vehicleFields}>
+                  <div className={styles.miniField}>
+                    <label className={styles.labelSmall}>Annual miles</label>
+                    <div className={styles.stepperRow}>
+                      <button type="button" className={styles.stepperBtn}
+                        onClick={() => setAnnualMiles(v => String(Math.max(1000, (parseInt(v)||10000) - 1000)))}>−</button>
+                      <span className={styles.stepperValue}>{Number(annualMiles).toLocaleString()}</span>
+                      <button type="button" className={styles.stepperBtn}
+                        onClick={() => setAnnualMiles(v => String((parseInt(v)||10000) + 1000))}>+</button>
+                    </div>
+                  </div>
+                  <div className={styles.miniField}>
+                    <label className={styles.labelSmall}>MPG</label>
+                    <input className={styles.input} type="number" value={mpg} onChange={e => setMpg(e.target.value)} />
+                  </div>
+                  <div className={styles.miniField}>
+                    <label className={styles.labelSmall}>Tank (L)</label>
+                    <input className={styles.input} type="number" value={tankLitres} onChange={e => setTankLitres(e.target.value)} />
+                  </div>
+                </div>
+                {saving && (
+                  <div className={styles.savingPreview}>
+                    💰 Choosing the cheapest station near you could save <strong>~£{saving}/yr</strong>
+                  </div>
+                )}
+
+                {/* Step 4: Email */}
+                <div className={styles.fieldGroup} style={{marginTop:'0.5rem'}}>
+                  <label className={styles.label}>Where should we send your alerts?</label>
                   <input
                     className={styles.input}
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="your@email.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
@@ -797,58 +758,12 @@ export default function Home() {
                 {submitError && <div className={styles.submitError}>{submitError}</div>}
 
                 <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Signing up...' : 'Get my FuelAlerts Free Email →'}
+                  {submitting ? 'Setting up your alerts...' : 'Send me weekly fuel prices →'}
                 </button>
 
                 <p className={styles.formFootnote}>
-                  Unsubscribe anytime. No app required.
+                  Free forever. Unsubscribe anytime. No app required.
                 </p>
-              </form>
-            )}
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section className={styles.howItWorks}>
-          <div className={styles.sectionInner}>
-            <div className={styles.sectionLabel}>How it works</div>
-            <h2 className={styles.sectionTitle}>Prices sent to you.<br />Not the other way around.</h2>
-            <div className={styles.stepsPhoto}>
-              <img src='https://images.unsplash.com/photo-1596568960638-96244807ed52?q=80&w=1548&auto=format&fit=crop' alt='Fuel station' />
-              <div className={styles.stepsPhotoOverlay} />
-            </div>
-            <div className={styles.steps}>
-              {[
-                { n: '01', title: 'Enter your postcode', desc: "Tell us where you are and how far you're willing to travel for fuel." },
-                { n: '02', title: 'We watch the prices', desc: 'Our system pulls live data from 7,150+ stations daily, direct from government sources.' },
-                { n: '03', title: 'You get an alert', desc: 'Weekly digest lands in your inbox showing the top 5 cheapest nearby stations — with exact prices.' },
-              ].map(step => (
-                <div key={step.n} className={styles.step}>
-                  <div className={styles.stepNum}>{step.n}</div>
-                  <h3 className={styles.stepTitle}>{step.title}</h3>
-                  <p className={styles.stepDesc}>{step.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Why FuelAlerts */}
-        <section className={styles.why}>
-          <div className={styles.sectionInner}>
-            <div className={styles.sectionLabel}>Why FuelAlerts</div>
-            <h2 className={styles.sectionTitle}>Other apps make you check.<br />We just <span className={styles.accent}>tell you.</span></h2>
-            <div className={styles.compareGrid}>
-              <div className={styles.compareCol}>
-                <div className={styles.compareHeader}>
-                  <span className={styles.compareLabelBad}>Other fuel apps</span>
-                </div>
-                {['Open the app to check', 'Remember to look before each fill-up', 'Download required', 'Cluttered with offers & ads', 'No savings calculation'].map(item => (
-                  <div key={item} className={styles.compareItem}>
-                    <span className={styles.crossIcon}>✕</span> {item}
-                  </div>
-                ))}
-              </div>
               <div className={`${styles.compareCol} ${styles.compareColGood}`}>
                 <div className={styles.compareHeader}>
                   <span className={styles.compareLabelGood}>FuelAlerts</span>
