@@ -31,9 +31,9 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
           Confirm your email and we'll start watching fuel prices near you.
           You'll get a weekly digest showing the cheapest stations in your area — no app needed.
         </p>
-		<p style="font-size:14px; color:#4ade80; margin-bottom:28px;">
-			Drivers typically save £100+ per year just by filling up at the cheapest station nearby.
-		</p>
+        <p style="font-size:14px; color:#4ade80; margin-bottom:28px;">
+          Drivers typically save £100+ per year just by filling up at the cheapest station nearby.
+        </p>
         <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
           <tr>
             <td style="background:#00e676; border-radius:10px;">
@@ -56,14 +56,14 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
         </div>
       </td>
     </tr>
-	<tr>
-	  <td style="text-align:center; padding-top:16px;">
-		<a href="${BASE_URL}/unsubscribe?token=${unsubscribeToken}"
-		   style="font-size:11px; color:#4a5a7a;">
-		   Unsubscribe
-		</a>
-	  </td>
-	</tr>
+    <tr>
+      <td style="text-align:center; padding-top:16px;">
+        <a href="${BASE_URL}/unsubscribe?token=${unsubscribeToken}"
+           style="font-size:11px; color:#4a5a7a;">
+           Unsubscribe
+        </a>
+      </td>
+    </tr>
     <tr>
       <td style="padding-top:28px; text-align:center;">
         <p style="font-size:12px; color:#4a5a7a; line-height:1.6;">
@@ -95,6 +95,11 @@ async function sendConfirmationEmail(email, confirmToken, unsubscribeToken) {
   }
 }
 
+// Generate a short unique referral code — 8 chars, uppercase alphanumeric
+function generateReferralCode() {
+  return crypto.randomBytes(6).toString('base64url').toUpperCase().slice(0, 8)
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -106,7 +111,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, postcode, lat, lon, fuel_type, radius_miles, annual_miles, mpg, tank_litres, vehicle } = req.body
+  const {
+    email, postcode, lat, lon, fuel_type, radius_miles,
+    annual_miles, mpg, tank_litres, vehicle,
+    // UTM tracking — passed from frontend query params
+    utm_source, utm_medium, utm_campaign, utm_content,
+    // Referral code from ?ref=XXXXXX
+    ref,
+  } = req.body
 
   if (!email || !postcode || !lat || !lon || !fuel_type) {
     return res.status(400).json({ error: 'Missing required fields' })
@@ -131,7 +143,11 @@ export default async function handler(req, res) {
     // Resend confirmation for pending subscribers
     await supabase
       .from('subscribers')
-      .update({ confirm_token_hash: confirmTokenHash, unsubscribe_token_hash: unsubscribeTokenHash, unsubscribe_token: unsubscribeToken })
+      .update({
+        confirm_token_hash: confirmTokenHash,
+        unsubscribe_token_hash: unsubscribeTokenHash,
+        unsubscribe_token: unsubscribeToken,
+      })
       .eq('id', existing.id)
 
     try {
@@ -140,6 +156,30 @@ export default async function handler(req, res) {
       console.error('Brevo resend error:', err)
     }
     return res.status(200).json({ message: 'Confirmation email resent.' })
+  }
+
+  // Resolve referred_by — look up the referrer's subscriber id from their referral code
+  let referred_by = null
+  if (ref) {
+    const { data: referrer } = await supabase
+      .from('subscribers')
+      .select('id')
+      .eq('referral_code', ref.toUpperCase())
+      .single()
+    if (referrer) referred_by = referrer.id
+  }
+
+  // Generate a unique referral code for this new subscriber
+  // Retry up to 5 times on the unlikely event of a collision
+  let referral_code = null
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateReferralCode()
+    const { data: clash } = await supabase
+      .from('subscribers')
+      .select('id')
+      .eq('referral_code', candidate)
+      .single()
+    if (!clash) { referral_code = candidate; break }
   }
 
   // Insert new subscriber
@@ -159,15 +199,24 @@ export default async function handler(req, res) {
       annual_miles: annual_miles || null,
       mpg: mpg || null,
       tank_litres: tank_litres || null,
-      // Vehicle summary — written directly for easy access in emails/confirm page
+      // Vehicle summary
       vehicle_reg:  vehicle?.reg  || null,
       vehicle_make: vehicle?.make || null,
       vehicle_year: vehicle?.year || null,
+      // Source tracking
+      utm_source:   utm_source  || null,
+      utm_medium:   utm_medium  || null,
+      utm_campaign: utm_campaign || null,
+      utm_content:  utm_content  || null,
+      // Referral
+      referral_code,
+      referred_by,
     })
     .select('id')
     .single()
 
   if (error) {
+    console.error('Subscriber insert error:', error)
     return res.status(500).json({ error: 'Failed to save subscription. Please try again.' })
   }
 
@@ -195,7 +244,6 @@ export default async function handler(req, res) {
         revenue_weight:            vehicle.revenueWeight      || null,
         marked_for_export:         vehicle.markedForExport    || false,
       })
-      // Non-fatal — don't block signup if this fails
       .then(({ error: vErr }) => {
         if (vErr) console.error('subscriber_vehicles insert error:', vErr)
       })
@@ -207,5 +255,8 @@ export default async function handler(req, res) {
     console.error('Brevo send error:', err)
   }
 
-  return res.status(200).json({ message: 'Subscribed successfully. Please check your email to confirm.' })
+  return res.status(200).json({
+    message: 'Subscribed successfully. Please check your email to confirm.',
+    referral_code,
+  })
 }

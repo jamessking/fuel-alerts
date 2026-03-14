@@ -52,6 +52,22 @@ export default function Home() {
   const [mpg, setMpg] = useState('45')
   const [tankLitres, setTankLitres] = useState('55')
 
+  // Source tracking — read from URL on mount
+  const [utmSource, setUtmSource] = useState(null)
+  const [utmMedium, setUtmMedium] = useState(null)
+  const [utmCampaign, setUtmCampaign] = useState(null)
+  const [utmContent, setUtmContent] = useState(null)
+  const [refCode, setRefCode] = useState(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('utm_source'))   setUtmSource(params.get('utm_source'))
+    if (params.get('utm_medium'))   setUtmMedium(params.get('utm_medium'))
+    if (params.get('utm_campaign')) setUtmCampaign(params.get('utm_campaign'))
+    if (params.get('utm_content'))  setUtmContent(params.get('utm_content'))
+    if (params.get('ref'))          setRefCode(params.get('ref'))
+  }, [])
+
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -190,6 +206,11 @@ export default function Home() {
           mpg: mpg ? parseFloat(mpg) : null,
           tank_litres: tankLitres ? parseFloat(tankLitres) : null,
           vehicle: regInfo ? { ...regInfo, reg: reg.replace(/\s/g, '').toUpperCase() } : null,
+          utm_source:   utmSource,
+          utm_medium:   utmMedium,
+          utm_campaign: utmCampaign,
+          utm_content:  utmContent,
+          ref:          refCode,
         })
       })
       const data = await res.json()

@@ -3,9 +3,12 @@ load_dotenv()
 
 import os
 import math
+import secrets
+import hashlib
 import requests
 from datetime import datetime, timezone, date, timedelta
 from typing import List, Optional
+from urllib.parse import quote
 
 # -----------------------------
 # CONSTANTS
@@ -21,6 +24,25 @@ def require_env(name: str) -> str:
     if not v:
         raise RuntimeError(f"Missing env var: {name}")
     return v
+
+def generate_magic_token() -> tuple:
+    """Returns (raw_token, hashed_token) for account link."""
+    raw    = secrets.token_urlsafe(32)
+    hashed = hashlib.sha256(raw.encode()).hexdigest()
+    return raw, hashed
+
+def supabase_store_magic_token(url: str, key: str, subscriber_id: str, token_hash: str, expires_at: str):
+    """Store hashed magic token in magic_token_hash + magic_token_expiry columns."""
+    requests.patch(
+        f"{url}/rest/v1/subscribers",
+        headers={
+            "apikey": key, "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json", "Prefer": "return=minimal"
+        },
+        params={"id": f"eq.{subscriber_id}"},
+        json={"magic_token_hash": token_hash, "magic_token_expiry": expires_at},
+        timeout=10,
+    )
 
 def haversine_miles(lat1, lon1, lat2, lon2) -> float:
     R = 3958.7613
@@ -65,44 +87,17 @@ def station_display_name(st: dict) -> str:
         return brand if len(brand) <= 3 else brand.title()
     return trading.title() if trading else "Independent"
 
-def logo_pill(logo_url: str, alt: str, size: int = 48) -> str:
-    """
-    Square iOS-style icon — white background, rounded corners.
-    Table-based layout for full email client compatibility (no flexbox/object-fit).
-    Shows brand logo if available, fuel pump placeholder if not.
-    """
+def logo_pill(logo_url: str, alt: str, width: int = 64, height: int = 36) -> str:
+    """Wrap logo in white pill for dark backgrounds"""
+    if not logo_url:
+        return ""
     safe_alt = (alt or "").replace('"', '&quot;')
-    radius = int(size * 0.22)
-    img_size = int(size * 0.75)
-    pad = (size - img_size) // 2
-
-    if logo_url:
-        inner = (
-            f'<table role="presentation" width="{size}" height="{size}" '
-            f'cellspacing="0" cellpadding="0" border="0">'
-            f'<tr><td align="center" valign="middle" style="padding:{pad}px;">'
-            f'<img src="{logo_url}" width="{img_size}" height="{img_size}" '
-            f'alt="{safe_alt}" border="0" '
-            f'style="display:block;width:{img_size}px;height:{img_size}px;" />'
-            f'</td></tr></table>'
-        )
-    else:
-        fsize = int(size * 0.48)
-        inner = (
-            f'<table role="presentation" width="{size}" height="{size}" '
-            f'cellspacing="0" cellpadding="0" border="0">'
-            f'<tr><td align="center" valign="middle">'
-            f'<span style="font-size:{fsize}px;line-height:1;color:#999999;">&#9981;</span>'
-            f'</td></tr></table>'
-        )
-
     return (
-        f'<table role="presentation" cellspacing="0" cellpadding="0" border="0" '
-        f'style="margin-bottom:10px;">'
-        f'<tr><td style="background:#ffffff;border-radius:{radius}px;'
-        f'width:{size}px;height:{size}px;overflow:hidden;">'
-        f'{inner}'
-        f'</td></tr></table>'
+        f'<div style="display:inline-block;background:#ffffff;border-radius:8px;'
+        f'padding:5px 10px;margin-bottom:8px;">'
+        f'<img src="{logo_url}" width="{width}" height="{height}" '
+        f'style="display:block;object-fit:contain;vertical-align:middle;" alt="{safe_alt}" />'
+        f'</div>'
     )
 
 # -----------------------------
@@ -137,7 +132,7 @@ def supabase_get_stations(url: str, key: str) -> list:
         r = requests.get(
             f"{url}/rest/v1/pfs_stations",
             params={
-                "select": "node_id,trading_name,brand_name,brand_clean,logo_url,postcode,latitude,longitude",
+                "select": "node_id,trading_name,brand_name,brand_clean,postcode,latitude,longitude",
                 # Don't filter on closure - handle it in Python instead
             },
             headers={
@@ -387,12 +382,11 @@ BRAND_LOGOS = {
 }
 
 def brand_logo_url(st: dict) -> str:
-    """Return logo URL — use logo_url from DB first, fall back to BRAND_LOGOS dict"""
-    db_logo = (st.get("logo_url") or "").strip()
-    if db_logo:
-        return db_logo
+    """Return logo URL — uses brand_clean first, then brand_name"""
+    # brand_clean is already normalised e.g. "Tesco", "Shell", "Motor Fuel Group"
     clean = (st.get("brand_clean") or "").strip().upper()
     raw   = (st.get("brand_name")  or "").strip().upper()
+
     for brand in (clean, raw):
         if not brand:
             continue
@@ -402,15 +396,6 @@ def brand_logo_url(st: dict) -> str:
             if key in brand or brand in key:
                 return BRAND_LOGOS[key]
     return ""
-
-def town_slug(town: str) -> str:
-    """Convert town name to URL slug matching the website"""
-    import re as _re
-    s = (town or "").lower().strip()
-    s = _re.sub(r"[^a-z0-9\s-]", "", s)
-    s = _re.sub(r"\s+", "-", s)
-    s = _re.sub(r"-+", "-", s)
-    return s
 
 # Colour palette — matches the website
 C_NAVY       = "#0a0f1e"
@@ -530,6 +515,7 @@ def build_email_html(
     used_default_mpg: bool,
     nearest_station: Optional[dict] = None,
     history_cache: Optional[dict] = None,
+    pref_url: str = "",
 ) -> str:
 
     unsub_token = subscriber.get("unsubscribe_token_hash", "")
@@ -577,8 +563,8 @@ def build_email_html(
         </div>
         """
 
-    # Savings strip — only show when there's a meaningful price change
-    if diff is not None and abs(diff) >= 0.1 and annual_miles > 0 and mpg_val:
+    # Savings strip — drops show always, rises only if >= 3p
+    if diff is not None and annual_miles > 0 and mpg_val and ((diff < 0 and abs(diff) >= 0.1) or diff >= 3.0):
         l_week  = litres_per_week(annual_miles, mpg_val)
         pw      = abs(l_week * pounds_from_ppl(diff))
         pf      = abs(tank_litres * pounds_from_ppl(diff))
@@ -664,6 +650,9 @@ def build_email_html(
         nearest_html = ""
 
     # Station rows — top 5 cheapest
+    # Find the cheapest price to highlight ALL tied stations
+    min_price = float(top_stations[0]["price"]) if top_stations else 0
+
     station_rows = ""
     for i, st in enumerate(top_stations):
         name  = esc(station_display_name(st))
@@ -672,14 +661,7 @@ def build_email_html(
         pc    = esc(st.get("postcode") or "")
         lat   = st.get("lat") or st.get("latitude", 0)
         lon   = st.get("lon") or st.get("longitude", 0)
-        # Use coords if valid, fall back to postcode+name search for bad/missing coords
-        from urllib.parse import quote as _q
-        if lat and lon and (abs(float(lat)) > 0.001 or abs(float(lon)) > 0.001):
-            maps_url = f"https://www.google.com/maps?q={lat},{lon}"
-        elif pc:
-            maps_url = f"https://www.google.com/maps?q={_q((name + ' ' + pc).strip())}"
-        else:
-            maps_url = f"https://www.google.com/maps?q=fuel+station"
+        maps_url = f"https://www.google.com/maps?q={lat},{lon}"
         logo_url = st.get("logo_url", "")
         logo_url = logo_url or brand_logo_url(st)
         logo_html = logo_pill(logo_url, name)
@@ -714,7 +696,8 @@ def build_email_html(
         else:
             price_change_html = ""
 
-        if i == 0:
+        is_cheapest = float(st["price"]) <= min_price
+        if is_cheapest:
             # Cheapest — highlighted green border
             station_rows += f"""
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
@@ -724,12 +707,10 @@ def build_email_html(
                 <td style="padding:16px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
-                      <td style="vertical-align:middle;width:60px;padding-right:14px;">
-                        {logo_html}
-                      </td>
                       <td style="vertical-align:middle;">
+                        {logo_html}
                         <div style="font-size:10px;font-weight:800;color:{C_GREEN};
-                                    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">
+                                    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">
                           &#9733; Cheapest nearby
                         </div>
                         <div style="font-size:15px;font-weight:700;color:{C_TEXT};">{name}</div>
@@ -741,13 +722,13 @@ def build_email_html(
                           </a>
                         </div>
                       </td>
-                      <td align="right" style="vertical-align:middle;padding-left:12px;white-space:nowrap;">
+                      <td align="right" style="vertical-align:middle;padding-left:12px;">
                         <div style="font-family:Arial,sans-serif;font-size:36px;font-weight:900;
                                     color:{C_GREEN};letter-spacing:-1px;line-height:1;">
                           {price:.1f}p
                         </div>
                         <div style="font-size:11px;color:{C_FAINT};text-align:right;margin-top:3px;">per litre</div>
-                        {f'<div style="font-size:11px;color:{C_AMBER};text-align:right;margin-top:5px;">&#127942; {weeks_cheapest} wk{"s" if weeks_cheapest != 1 else ""} cheapest</div>' if weeks_cheapest >= 2 else ""}
+                        {f'<div style="font-size:11px;font-weight:800;color:#ffffff;background:{C_AMBER};padding:3px 8px;border-radius:6px;text-align:center;margin-top:6px;display:inline-block;">&#127942; {weeks_cheapest} wk{"s" if weeks_cheapest != 1 else ""} cheapest</div>' if weeks_cheapest >= 2 else ""}
                       </td>
                     </tr>
                   </table>
@@ -763,9 +744,6 @@ def build_email_html(
                 <td style="padding:14px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
-                      <td style="vertical-align:middle;width:52px;padding-right:12px;">
-                        {logo_pill(logo_url, name, size=44)}
-                      </td>
                       <td style="vertical-align:middle;">
                         <div style="font-size:12px;font-weight:700;color:{C_FAINT};margin-bottom:4px;">
                           #{i+1}
@@ -779,7 +757,7 @@ def build_email_html(
                           </a>
                         </div>
                       </td>
-                      <td align="right" style="vertical-align:middle;padding-left:12px;white-space:nowrap;">
+                      <td align="right" style="vertical-align:middle;padding-left:12px;">
                         <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:800;
                                     color:{C_TEXT};letter-spacing:-0.5px;line-height:1;">
                           {price:.1f}p
@@ -827,51 +805,9 @@ def build_email_html(
 
     spacer = '<td style="width:12px;"></td>'
 
-    from urllib.parse import quote as _qurlq
-    # Dynamic share message and CTA tone — based on price direction
-    if diff is not None and diff < -0.5:
-        # Prices dropped — good news to share
-        share_headline  = f"🎉 Good news — {fuel_label(fuel_type)} near {postcode} has dropped!"
-        share_subtext   = f"It's {cheapest_price:.1f}p/L at {esc(station_display_name(top_stations[0])) if top_stations else 'the cheapest station'} — {abs(diff):.1f}p cheaper than last week. Pass it on!"
-        cta_bg          = C_GREEN_DIM
-        cta_emoji       = "📣"
-        cta_btn_bg      = "#00c853"
-        cta_btn_label   = "Share the good news"
-        share_msg       = f"⛽ Fuel prices are DOWN near {postcode}! {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L — {abs(diff):.1f}p cheaper than last week. Found it on FuelAlerts 👉 {site_url}"
-    elif diff is not None and diff > 0.5:
-        # Prices rose — warn friends
-        share_headline  = f"⚠️ Heads up — {fuel_label(fuel_type)} prices have risen near {postcode}"
-        share_subtext   = f"It's now {cheapest_price:.1f}p/L — up {diff:.1f}p from last week. Let your mates know so they can plan ahead."
-        cta_bg          = "#b34000"
-        cta_emoji       = "📢"
-        cta_btn_bg      = "#e65100"
-        cta_btn_label   = "Warn your mates"
-        share_msg       = f"⛽ Fuel prices are UP near {postcode} — {fuel_label(fuel_type)} is now {cheapest_price:.1f}p/L (+{diff:.1f}p). Worth knowing before you fill up. Check FuelAlerts: {site_url}"
-    else:
-        # Prices stable or first report
-        share_headline  = f"Know someone who drives near {postcode}?"
-        share_subtext   = f"Send them this — if they fill a 50L tank at the cheapest spot vs the area average, they could save £{f'{(area_avg - cheapest_price) * 50 / 100:.2f}' if area_avg else 'money'}."
-        cta_bg          = C_NAVY_LIGHT
-        cta_emoji       = "📱"
-        cta_btn_bg      = "#25D366"
-        cta_btn_label   = "Share on WhatsApp"
-        share_msg       = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — found it on FuelAlerts. Check if it's cheap near you: {site_url}"
-
-    whatsapp_url = f"https://wa.me/?text={_qurlq(share_msg)}"
-    sms_url      = f"sms:?body={_qurlq(share_msg)}"
-
-    # Town page link for hero block
-    if top_stations and top_stations[0].get("town"):
-        _t = esc(top_stations[0]["town"])
-        _s = town_slug(top_stations[0]["town"])
-        _town_link = (
-            f'<div style="margin-top:8px;">'
-'<a href="{site_url}/town/{_s}" '
-'style="font-size:12px;font-weight:700;color:{C_MUTED};text-decoration:none;">'
-'&#128205; See all prices in {_t} &rarr;</a></div>'
-        )
-    else:
-        _town_link = ""
+    share_msg  = f"⛽ {fuel_label(fuel_type)} is {cheapest_price:.1f}p/L near {postcode} — I found it on FuelAlerts. Check if it's cheap near you too: {site_url}"
+    from urllib.parse import quote
+    whatsapp_url = f"https://wa.me/?text={quote(share_msg)}"
 
     return f"""<!doctype html>
 <html>
@@ -939,7 +875,6 @@ def build_email_html(
                   {esc(top_stations[0].get('postcode') or '') if top_stations else ''} &nbsp;&#183;&nbsp;
                   {top_stations[0]['distance_miles']:.1f} miles away
                 </div>
-                {_town_link}
                 {delta_html}
               </div>
             </td>
@@ -948,34 +883,26 @@ def build_email_html(
           <!-- ── SAVINGS STRIP ── -->
           {savings_strip}
 
-          <!-- ── CTA SHARE — dynamic based on price direction ── -->
+          <!-- ── CTA SHARE (prominent, right after savings strip) ── -->
           <tr>
-            <td style="background:{cta_bg};border-left:1px solid {C_BORDER};
-                       border-right:1px solid {C_BORDER};padding:20px 32px;
-                       border-radius:0;">
+            <td style="background:{C_NAVY_LIGHT};border-left:1px solid {C_BORDER};
+                       border-right:1px solid {C_BORDER};padding:20px 32px;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:6px;">
-                      {cta_emoji} {share_headline}
+                    <div style="font-size:15px;font-weight:800;color:{C_TEXT};margin-bottom:4px;">
+                      Know someone who drives near {postcode}?
                     </div>
-                    <div style="font-size:12px;color:{C_MUTED};line-height:1.5;">
-                      {share_subtext}
+                    <div style="font-size:12px;color:{C_MUTED};">
+                      Send them this price — if they fill a 50L tank at the cheapest station vs the area average, they'd save £{f"{(area_avg - cheapest_price) * 50 / 100:.2f}" if area_avg else "money"}
                     </div>
                   </td>
                   <td align="right" style="vertical-align:middle;padding-left:16px;white-space:nowrap;">
                     <a href="{whatsapp_url}"
-                       style="display:inline-block;background:{cta_btn_bg};border-radius:10px;
-                              padding:11px 20px;text-decoration:none;font-size:13px;
-                              font-weight:800;color:#ffffff;margin-bottom:8px;">
-                      &#128242; WhatsApp
-                    </a>
-                    <br/>
-                    <a href="{sms_url}"
-                       style="display:inline-block;background:{C_NAVY_LIGHT};border:1px solid {C_BORDER};border-radius:10px;
-                              padding:8px 20px;text-decoration:none;font-size:12px;
-                              font-weight:700;color:{C_TEXT};">
-                      &#128172; SMS
+                       style="display:inline-block;background:#25D366;border-radius:10px;
+                              padding:11px 22px;text-decoration:none;font-size:14px;
+                              font-weight:800;color:#ffffff;">
+                      &#128241; Share on WhatsApp
                     </a>
                   </td>
                 </tr>
@@ -1024,7 +951,35 @@ def build_email_html(
               </a>
             </td>
           </tr>
-            </td></tr></table>
+
+          <!-- ── UPDATE PREFERENCES BUTTON ── -->
+          {"" if not pref_url else f'''
+          <tr>
+            <td style="background:{C_NAVY_LIGHT};border-left:1px solid {C_BORDER};
+                       border-right:1px solid {C_BORDER};padding:20px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <div style="font-size:14px;font-weight:800;color:{C_TEXT};">
+                      Wrong postcode or fuel type?
+                    </div>
+                    <div style="font-size:12px;color:{C_MUTED};margin-top:3px;">
+                      Update your preferences — no login needed
+                    </div>
+                  </td>
+                  <td align="right" style="vertical-align:middle;padding-left:12px;">
+                    <a href="''' + pref_url + '''"
+                       style="display:inline-block;background:{C_GREEN};color:{C_NAVY};
+                              font-size:13px;font-weight:800;padding:10px 20px;
+                              border-radius:8px;text-decoration:none;white-space:nowrap;">
+                      &#9998; Update my details
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>'''}
+
           <!-- ── FOOTER ── -->
           <tr>
             <td style="background:{C_NAVY};border:1px solid {C_BORDER};border-top:none;
@@ -1033,11 +988,6 @@ def build_email_html(
                 Prices sourced from the UK Government Fuel Finder API &nbsp;&#183;&nbsp; We check daily for the latest prices
               </div>
               <div style="text-align:center;margin-top:12px;">
-                <a href="{site_url}/signin"
-                   style="font-size:12px;color:{C_MUTED};text-decoration:none;font-weight:700;">
-                  &#9998; Update my details
-                </a>
-                &nbsp;&nbsp;&#183;&nbsp;&nbsp;
                 <a href="{unsub}" style="font-size:12px;color:{C_FAINT};text-decoration:none;">
                   Unsubscribe
                 </a>
@@ -1096,7 +1046,7 @@ def main():
 
     # In test mode — replace list with single test entry using first sub's settings
     if test_mode:
-        real_sub = next((s for s in subscribers if s.get('postcode') == 'AB41 8AR'), subscribers[0])
+        real_sub = subscribers[0]
         subscribers = [{ **real_sub, "email": test_email }]
         print(f"⚠️  TEST MODE — 1 email to {test_email} using settings from {real_sub.get('postcode')}")
 
@@ -1154,7 +1104,11 @@ def main():
                 dist = haversine_miles(sub_lat, sub_lon, st["lat"], st["lon"])
                 if dist <= radius:
                     candidates.append({**st, **fp, "distance_miles": dist})
-            candidates.sort(key=lambda x: (float(x["price"]), x["distance_miles"]))
+            candidates.sort(key=lambda x: (
+                float(x["price"]),           # 1. cheapest first
+                x["distance_miles"],          # 2. closest wins tie
+                -(x.get("updated_at") or ""), # 3. most recently updated wins (negate for desc)
+            ))
             subscriber_candidates[sub["id"]] = candidates
             if candidates:
                 # Add top 5 nodes for history fetch, not just cheapest
@@ -1214,8 +1168,15 @@ def main():
                 mpg_val = default_mpg_for_fuel(fuel_type)
                 used_default = True
 
+            # Generate magic token for account page (24hr expiry — matches signin flow)
+            magic_raw, magic_hash = generate_magic_token()
+            magic_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+            supabase_store_magic_token(supabase_url, supabase_key, sub["id"], magic_hash, magic_expires)
+            pref_url = f"{site_url}/account?token={magic_raw}"
+
             # Build + send email
-            subject = f"FuelAlerts: cheapest {fuel_label(fuel_type)} within {radius} miles of {sub.get('postcode','')}"
+            postcode_short = (sub.get('postcode') or '').split(' ')[0]  # e.g. AB41
+            subject = f"Cheapest {fuel_label(fuel_type)} near {postcode_short}: {cheapest_price:.1f}p at {station_display_name(top[0]) if top else 'nearby'}"
             html = build_email_html(
                 site_url       = site_url,
                 subscriber     = sub,
@@ -1232,6 +1193,7 @@ def main():
                 used_default_mpg = used_default,
                 nearest_station  = nearest_station,
                 history_cache    = history_cache,
+                pref_url        = pref_url,
             )
 
             brevo_send_email(brevo_key, sender_email, to_email, subject, html)
