@@ -536,7 +536,7 @@ export default function Home() {
               <div className={styles.successState}>
                 <div className={styles.successIcon}>✓</div>
                 <h3>You're on the list!</h3>
-                <p>Check your inbox to confirm your email. Your first FuelAlert arrives Monday.</p>
+                <p>Check your inbox to confirm your email, and see the latest prices in your area today. Your first regular FuelAlert arrives Monday.  If you need to change and details there is a link in the message.</p>
 
                 {/* Nearby stations */}
                 {nearbyLoading && (
