@@ -70,6 +70,8 @@ export default function Home() {
 
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [myReferralCode, setMyReferralCode] = useState(null)
+  const [copied, setCopied] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [stationCount, setStationCount] = useState(null)
   const [stationCountLoading, setStationCountLoading] = useState(false)
@@ -216,6 +218,7 @@ export default function Home() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Subscription failed')
       setSubmitted(true)
+      if (data.referral_code) setMyReferralCode(data.referral_code)
 
       // Load nearby stations for the success state
       setNearbyLoading(true)
@@ -537,6 +540,50 @@ export default function Home() {
                 <div className={styles.successIcon}>✓</div>
                 <h3>You're on the list!</h3>
                 <p>Check your inbox to confirm your email, and see the latest prices in your area today. Your first regular FuelAlert arrives Monday.  If you need to change and details there is a link in the message.</p>
+
+                {/* Referral share */}
+                {myReferralCode && (
+                  <div style={{
+                    width:'100%', marginTop:'1rem', padding:'1rem',
+                    background:'rgba(0,230,118,0.06)', border:'1px solid rgba(0,230,118,0.2)',
+                    borderRadius:'12px',
+                  }}>
+                    <p style={{fontSize:'0.8rem',fontWeight:700,color:'#00e676',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.35rem'}}>
+                      🎁 Unlock premium alerts free
+                    </p>
+                    <p style={{fontSize:'0.78rem',color:'#8899bb',marginBottom:'0.6rem',lineHeight:1.5}}>
+                      Share your link with a friend. When they sign up, you both unlock same-day price alerts.
+                    </p>
+                    <div style={{display:'flex',gap:'0.4rem',alignItems:'center'}}>
+                      <div style={{
+                        flex:1, background:'#0a0f1e', border:'1px solid #1e2d4a',
+                        borderRadius:'8px', padding:'0.5rem 0.75rem',
+                        fontSize:'0.75rem', color:'#8899bb', fontFamily:'monospace',
+                        overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+                      }}>
+                        fuelalerts.co.uk/?ref={myReferralCode}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://fuelalerts.co.uk/?ref=${myReferralCode}`)
+                          setCopied(true)
+                          setTimeout(() => setCopied(false), 2000)
+                        }}
+                        style={{
+                          background: copied ? 'rgba(0,230,118,0.15)' : '#1a2640',
+                          border: '1px solid ' + (copied ? 'rgba(0,230,118,0.4)' : '#1e2d4a'),
+                          borderRadius:'8px', padding:'0.5rem 0.75rem',
+                          color: copied ? '#00e676' : '#8899bb',
+                          fontSize:'0.75rem', cursor:'pointer', whiteSpace:'nowrap',
+                          transition:'all 0.15s',
+                        }}
+                      >
+                        {copied ? '✓ Copied' : 'Copy link'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Nearby stations */}
                 {nearbyLoading && (
